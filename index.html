@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PhysicLabAI</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- React and Babel for JSX -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Framer Motion for Animations -->
+    <script src="https://unpkg.com/framer-motion@latest/dist/framer-motion.js"></script>
+
+    <!-- Chart.js for Graphing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base and dark mode styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .katex { font-size: 1.1em !important; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .dark .modal-content {
+            background-color: #1f2937; /* gray-800 */
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #1f2937;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        .dark .spinner {
+            border-left-color: #f3f4f6;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Academic document styles */
+        .academic-document {
+            font-family: 'Lora', serif;
+            line-height: 1.7;
+        }
+        .academic-document h1, .academic-document h2, .academic-document h3 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            margin-top: 1.5em;
+            margin-bottom: 0.8em;
+            line-height: 1.3;
+        }
+        .academic-document h1 {
+            font-size: 2.25rem;
+            border-bottom: 2px solid;
+            padding-bottom: 0.3em;
+        }
+        .academic-document h2 {
+            font-size: 1.75rem;
+            border-bottom: 1px solid;
+            padding-bottom: 0.3em;
+        }
+        .academic-document h3 {
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+        .academic-document p {
+            margin-bottom: 1.25em;
+        }
+        .academic-document .katex-display {
+            margin: 1.5em 0;
+        }
+        .academic-document strong {
+            font-weight: 600;
+        }
+        .dark .academic-document h1, .dark .academic-document h2 {
+            border-color: #4b5563; /* gray-600 */
+        }
+
+        /* Legal Text Styles */
+        .legal-text h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .legal-text p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .legal-text ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+         /* Added prose styles for legal pages */
+        .prose {
+            max-width: 80ch; /* equivalent to max-w-3xl for readability */
+        }
+        .dark .prose {
+             --tw-prose-body: #d1d5db;
+             --tw-prose-headings: #f3f4f6;
+             --tw-prose-lead: #9ca3af;
+             --tw-prose-links: #f9fafb;
+             --tw-prose-bold: #f9fafb;
+             --tw-prose-counters: #9ca3af;
+             --tw-prose-bullets: #4b5563;
+             --tw-prose-hr: #374151;
+             --tw-prose-quotes: #e5e7eb;
+             --tw-prose-quote-borders: #374151;
+             --tw-prose-captions: #9ca3af;
+             --tw-prose-code: #f9fafb;
+             --tw-prose-pre-code: #d1d5db;
+             --tw-prose-pre-bg: #1f2937;
+             --tw-prose-th-borders: #374151;
+             --tw-prose-td-borders: #374151;
+        }
+        .prose h1 {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 1em;
+        }
+        .prose h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose p, .prose ul {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+        }
+    </style>
+    <script>
+      // Configure Tailwind to enable class-based dark mode
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+</head>
+<body class="antialiased bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-200">
+
+    <div id="app-root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+        
+        const { motion, AnimatePresence } = window.Framer || { 
+            motion: new Proxy({}, { 
+                get: (target, prop) => {
+                    const FallbackComponent = ({ children, ...props }) => {
+                        const motionProps = ['whileHover', 'whileTap', 'initial', 'animate', 'exit', 'transition', 'layout', 'layoutId'];
+                        const filteredProps = { ...props };
+                        motionProps.forEach(p => delete filteredProps[p]);
+                        return React.createElement(prop, filteredProps, children);
+                    };
+                    return FallbackComponent;
+                }
+            }),
+            AnimatePresence: ({ children }) => <>{children}</> 
+        };
+
+        // --- Internationalization (i18n) ---
+        const LanguageContext = createContext();
+        const useLanguage = () => useContext(LanguageContext);
+
+        const translations = {
+            es: {
+                welcomeTitle: 'Bienvenido a PhysicLabAI',
+                welcomeSubtitle: 'Tu asistente personal para aprender y dominar la física. ¿Qué te gustaría hacer hoy?',
+                exploreTopics: 'Explorar Temas',
+                exploreDescription: 'Lee guías académicas, entiende conceptos clave y consulta a la IA.',
+                startLearning: 'Empezar a Aprender',
+                practiceProblems: 'Practicar Problemas',
+                practiceDescription: 'Pon a prueba tus conocimientos con problemas generados por IA.',
+                solveProblems: 'Resolver Problemas',
+                backToHome: 'Inicio',
+                backToCategories: 'Volver a Categorías',
+                backToTopics: 'Volver a Temas',
+                backToSubtopics: 'Volver a Sub-temas',
+                backToProblemType: 'Volver a Tipo de Problema',
+                backToDifficulty: 'Volver a Dificultad',
+                physicsCategories: 'Categorías de Física',
+                topicsOf: 'Temas de',
+                subtopicsOf: 'Sub-temas de',
+                selectProblemType: 'Selecciona el Tipo de Problema',
+                selectDifficulty: 'Selecciona la Dificultad',
+                aiTutor: 'Tutor de IA',
+                checkAnswer: 'Revisar',
+                generateAnotherProblem: 'Generar Otro Problema',
+                generating: 'Generando...',
+                correctAnswer: '¡Respuesta Correcta!',
+                incorrectAnswer: 'Respuesta Incorrecta',
+                theCorrectAnswerWas: 'La respuesta correcta era:',
+                solution: 'Solución:',
+                askAITutor: 'Preguntar al Tutor de IA',
+                doYouHaveQuestions: '¿Tienes preguntas sobre este tema?',
+                aiTutorAnalyzing: 'Analizando...',
+                aiTutorError: 'Hubo un error al conectar con el tutor.',
+                typeYourQuestion: 'Escribe tu pregunta...',
+                send: 'Enviar',
+                termsOfUse: 'Términos de Uso',
+                privacyPolicy: 'Política de Privacidad',
+                allRightsReserved: 'Todos los derechos reservados.',
+                lastUpdated: 'Última actualización'
+            },
+            en: {
+                welcomeTitle: 'Welcome to PhysicLabAI',
+                welcomeSubtitle: 'Your personal assistant to learn and master physics. What would you like to do today?',
+                exploreTopics: 'Explore Topics',
+                exploreDescription: 'Read academic guides, understand key concepts, and consult the AI.',
+                startLearning: 'Start Learning',
+                practiceProblems: 'Practice Problems',
+                practiceDescription: 'Test your knowledge with AI-generated problems.',
+                solveProblems: 'Solve Problems',
+                backToHome: 'Home',
+                backToCategories: 'Back to Categories',
+                backToTopics: 'Back to Topics',
+                backToSubtopics: 'Back to Sub-topics',
+                backToProblemType: 'Back to Problem Type',
+                backToDifficulty: 'Back to Difficulty',
+                physicsCategories: 'Physics Categories',
+                topicsOf: 'Topics in',
+                subtopicsOf: 'Sub-topics of',
+                selectProblemType: 'Select the Problem Type',
+                selectDifficulty: 'Select the Difficulty',
+                aiTutor: 'AI Tutor',
+                checkAnswer: 'Check Answer',
+                generateAnotherProblem: 'Generate Another Problem',
+                generating: 'Generating...',
+                correctAnswer: 'Correct Answer!',
+                incorrectAnswer: 'Incorrect Answer',
+                theCorrectAnswerWas: 'The correct answer was:',
+                solution: 'Solution:',
+                askAITutor: 'Ask AI Tutor',
+                doYouHaveQuestions: 'Do you have questions about this topic?',
+                aiTutorAnalyzing: 'Analyzing...',
+                aiTutorError: 'There was an error connecting to the tutor.',
+                typeYourQuestion: 'Type your question...',
+                send: 'Send',
+                termsOfUse: 'Terms of Use',
+                privacyPolicy: 'Privacy Policy',
+                allRightsReserved: 'All rights reserved.',
+                lastUpdated: 'Last updated'
+            }
+        };
+
+        const LanguageProvider = ({ children }) => {
+            const [lang, setLang] = useState('es');
+            const t = (key) => translations[lang][key] || key;
+
+            useEffect(() => {
+                document.documentElement.lang = lang;
+            }, [lang]);
+
+            return (
+                <LanguageContext.Provider value={{ lang, setLang, t }}>
+                    {children}
+                </LanguageContext.Provider>
+            );
+        };
+        
+        // --- Component to render Markdown and LaTeX ---
+        const ContentRenderer = ({ content }) => {
+            const containerRef = useRef(null);
+            useEffect(() => {
+                const element = containerRef.current;
+                if (element && content) {
+                    let htmlContent = content
+                        .replace(/\*\*(Planteamiento:|Approach:)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*\*(Sustitución:|Substitution:)\*\*/g, '<br /><br /><strong>$1</strong>')
+                        .replace(/\*\*(Resultado:|Result:)\*\*/g, '<br /><br /><strong>$1</strong>')
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                        .replace(/\\n/g, '<br />');
+
+                    element.innerHTML = htmlContent;
+
+                    if (window.renderMathInElement) {
+                        try {
+                            window.renderMathInElement(element, {
+                                delimiters: [
+                                    {left: '$$', right: '$$', display: true},
+                                    {left: '$', right: '$', display: false}
+                                ],
+                                throwOnError: false
+                            });
+                        } catch (error) {
+                            console.error("KaTeX error:", error);
+                            element.innerHTML = htmlContent; // Fallback to raw HTML
+                        }
+                    }
+                }
+            }, [content]);
+            return <span ref={containerRef} />;
+        };
+
+        // --- Application data STRUCTURED BY CATEGORY ---
+        const topicCategories = {
+            es: [
+                {
+                    category: 'Fundamentos',
+                    topics: [
+                        { name: 'Medición y Unidades', subtopics: ['Conversión de Unidades', 'Cifras Significativas', 'Análisis Dimensional', 'Orden de Magnitud', 'Cálculo de Errores', 'Análisis de Gráficas'] },
+                        { name: 'Vectores', subtopics: ['Componentes de un Vector', 'Suma de Vectores', 'Producto Escalar', 'Producto Vectorial'] }
+                    ]
+                },
+                {
+                    category: 'Mecánica',
+                    topics: [
+                        { name: 'Cinemática', subtopics: ['Movimiento Rectilíneo Uniforme', 'Movimiento Rectilíneo Uniformemente Acelerado', 'Caída Libre', 'Lanzamiento de Proyectiles', 'Movimiento Circular Uniforme', 'Movimiento Circular Uniformemente Acelerado'] },
+                        { name: 'Dinámica', subtopics: ['Primera Ley de Newton', 'Segunda Ley de Newton', 'Tercera Ley de Newton', 'Fuerza de Fricción', 'Diagramas de Cuerpo Libre', 'Fuerzas Ficticias y Marcos no Inerciales', 'Ley de Gravitación Universal'] },
+                        { name: 'Trabajo y Energía', subtopics: ['Trabajo', 'Potencia', 'Energía Cinética', 'Energía Potencial Gravitacional', 'Energía Potencial Elástica', 'Conservación de la Energía', 'Fuerzas No Conservativas'] },
+                        { name: 'Impulso y Momento', subtopics: ['Momento Lineal', 'Impulso', 'Conservación del Momento Lineal', 'Colisiones Elásticas e Inelásticas'] },
+                        { name: 'Mecánica Rotacional', subtopics: ['Torque', 'Equilibrio Rotacional', 'Centro de Gravedad', 'Momento de Inercia', 'Teorema de los Ejes Paralelos'] },
+                        { name: 'Movimiento Periódico', subtopics: ['Movimiento Armónico Simple', 'Péndulo Simple', 'Masa-Resorte', 'Ecuaciones del Movimiento'] }
+                    ]
+                },
+                {
+                    category: 'Fluidos y Termodinámica',
+                    topics: [
+                        { name: 'Fluidos', subtopics: ['Presión y Densidad', 'Presión Hidrostática', 'Principio de Arquímedes', 'Tensión Superficial', 'Capilaridad', 'Ecuación de Bernoulli', 'Efecto Venturi'] },
+                        { name: 'Temperatura y Calor', subtopics: ['Escalas de Temperatura', 'Dilatación Térmica', 'Calorimetría', 'Cambios de Fase', 'Equilibrio Térmico'] },
+                        { name: 'Termodinámica', subtopics: ['Primera Ley de la Termodinámica', 'Segunda Ley de la Termodinámica', 'Entropía', 'Máquinas Térmicas', 'Eficiencia Térmica', 'Ciclo de Carnot'] }
+                    ]
+                },
+                {
+                    category: 'Electricidad y Magnetismo',
+                    topics: [
+                        { name: 'Electrostática', subtopics: ['Ley de Coulomb', 'Campo Eléctrico', 'Campo Eléctrico de Cargas Puntuales', 'Campo Eléctrico Uniforme', 'Superficies Equipotenciales'] },
+                        { name: 'Potencial y Energía Eléctrica', subtopics: ['Potencial Eléctrico', 'Potencial en Campos Uniformes', 'Energía Potencial Eléctrica', 'Trabajo Eléctrico'] },
+                        { name: 'Circuitos de Corriente Directa', subtopics: ['Corriente Eléctrica', 'Ley de Ohm', 'Resistencia y Resistividad', 'Resistencia y Temperatura', 'Capacitancia', 'Capacitores', 'Circuitos en Serie y Paralelo', 'Leyes de Kirchhoff', 'Circuitos RC', 'Constante de Tiempo'] },
+                        { name: 'Magnetismo', subtopics: ['Fuerza Magnética sobre Cargas', 'Fuerza Magnética sobre Corrientes', 'Campo Magnético de Conductores', 'Campo Magnético de una Espira', 'Campo Magnético de un Solenoide', 'Ley de Faraday', 'Ley de Lenz', 'Inducción Electromagnética', 'Aplicaciones: Motores y Generadores'] }
+                    ]
+                },
+                {
+                    category: 'Ondas y Óptica',
+                    topics: [
+                        { name: 'Ondas', subtopics: ['Propiedades de las Ondas', 'Periodo, Frecuencia y Longitud de Onda', 'Efecto Doppler', 'Interferencia', 'Ondas Estacionarias', 'Resonancia'] },
+                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Instrumentos Ópticos'] }
+                    ]
+                }
+            ],
+            en: [
+                 {
+                    category: 'Fundamentals',
+                    topics: [
+                        { name: 'Measurement & Units', subtopics: ['Unit Conversion', 'Significant Figures', 'Dimensional Analysis', 'Order of Magnitude', 'Error Calculation', 'Graph Analysis'] },
+                        { name: 'Vectors', subtopics: ['Vector Components', 'Vector Addition', 'Scalar Product', 'Vector Product'] }
+                    ]
+                },
+                {
+                    category: 'Mechanics',
+                    topics: [
+                        { name: 'Kinematics', subtopics: ['Uniform Rectilinear Motion', 'Uniformly Accelerated Rectilinear Motion', 'Free Fall', 'Projectile Motion', 'Uniform Circular Motion', 'Uniformly Accelerated Circular Motion'] },
+                        { name: 'Dynamics', subtopics: ["Newton's First Law", "Newton's Second Law", "Newton's Third Law", 'Friction Force', 'Free-Body Diagrams', 'Fictitious Forces & Non-Inertial Frames', 'Universal Law of Gravitation'] },
+                        { name: 'Work & Energy', subtopics: ['Work', 'Power', 'Kinetic Energy', 'Gravitational Potential Energy', 'Elastic Potential Energy', 'Conservation of Energy', 'Non-Conservative Forces'] },
+                        { name: 'Impulse & Momentum', subtopics: ['Linear Momentum', 'Impulse', 'Conservation of Linear Momentum', 'Elastic & Inelastic Collisions'] },
+                        { name: 'Rotational Mechanics', subtopics: ['Torque', 'Rotational Equilibrium', 'Center of Gravity', 'Moment of Inertia', 'Parallel Axis Theorem'] },
+                        { name: 'Periodic Motion', subtopics: ['Simple Harmonic Motion', 'Simple Pendulum', 'Mass-Spring System', 'Equations of Motion'] }
+                    ]
+                },
+                {
+                    category: 'Fluids & Thermodynamics',
+                    topics: [
+                        { name: 'Fluids', subtopics: ['Pressure & Density', 'Hydrostatic Pressure', "Archimedes' Principle", 'Surface Tension', 'Capillarity', "Bernoulli's Equation", 'Venturi Effect'] },
+                        { name: 'Temperature & Heat', subtopics: ['Temperature Scales', 'Thermal Expansion', 'Calorimetry', 'Phase Changes', 'Thermal Equilibrium'] },
+                        { name: 'Thermodynamics', subtopics: ['First Law of Thermodynamics', 'Second Law of Thermodynamics', 'Entropy', 'Heat Engines', 'Thermal Efficiency', 'Carnot Cycle'] }
+                    ]
+                },
+                {
+                    category: 'Electricity & Magnetism',
+                    topics: [
+                        { name: 'Electrostatics', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
+                        { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
+                        { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitance', 'Capacitors', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
+                        { name: 'Magnetism', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Applications: Motors & Generators'] }
+                    ]
+                },
+                {
+                    category: 'Waves & Optics',
+                    topics: [
+                        { name: 'Waves', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
+                        { name: 'Optics', subtopics: ['Reflection', 'Refraction (Snell\'s Law)', 'Plane Mirrors', 'Concave Mirrors', 'Convex Mirrors', 'Biconvex Lenses', 'Biconcave Lenses', 'Optical Instruments'] }
+                    ]
+                }
+            ]
+        };
+
+        const problemVariations = {
+            es: {
+                'Conversión de Unidades': ['Problemas de conversión de longitud', 'Problemas de conversión de masa y tiempo', 'Conversión de unidades derivadas'],
+                'Cifras Significativas': ['Identificación de cifras significativas', 'Operaciones con cifras significativas'],
+                'Análisis Dimensional': ['Verificación de homogeneidad en ecuaciones', 'Derivación de fórmulas'],
+                'Orden de Magnitud': ['Estimación de órdenes de magnitud', 'Comparación de magnitudes'],
+                'Cálculo de Errores': ['Análisis de error absoluto y relativo', 'Propagación de errores en mediciones'],
+                'Análisis de Gráficas': ['Interpretación de gráficas x-t', 'Interpretación de gráficas v-t', 'Significado físico de la pendiente', 'Significado físico del área bajo la curva'],
+                'Componentes de un Vector': ['Descomposición de vectores', 'Composición de un vector desde sus componentes'],
+                'Suma de Vectores': ['Método analítico para la resultante', 'Condiciones de equilibrio (vector nulo)'],
+                'Producto Escalar': ['Aplicación del producto escalar', 'Ángulo entre dos vectores'],
+                'Producto Vectorial': ['Aplicación del producto vectorial', 'Magnitud y dirección del vector resultante'],
+                'Movimiento Rectilíneo Uniforme': ['Relación entre distancia, velocidad y tiempo'],
+                'Movimiento Rectilíneo Uniformemente Acelerado': ['Análisis de velocidad final', 'Análisis del desplazamiento', 'Problemas sin variable de tiempo'],
+                'Caída Libre': ['Análisis de altura y tiempo de caída', 'Velocidad de impacto'],
+                'Lanzamiento de Proyectiles': ['Análisis del alcance horizontal', 'Análisis de la altura máxima', 'Tiempo de vuelo del proyectil'],
+                'Movimiento Circular Uniforme': ['Análisis de la velocidad tangencial', 'Análisis de la aceleración centrípeta'],
+                'Movimiento Circular Uniformemente Acelerado': ['Relaciones de cinemática rotacional'],
+                'Primera Ley de Newton': ['Sistemas en equilibrio estático', 'Sistemas en movimiento a velocidad constante'],
+                'Segunda Ley de Newton': ['Aplicación de F=ma', 'Problemas de fuerza y aceleración', 'Análisis de masa inercial'],
+                'Tercera Ley de Newton': ['Identificación de pares acción-reacción', 'Sistemas de cuerpos en interacción'],
+                'Fuerza de Fricción': ['Análisis de fricción estática vs. cinética', 'Problemas en planos inclinados'],
+                'Diagramas de Cuerpo Libre': ['Construcción de DCL para un cuerpo', 'Construcción de DCL para sistemas de cuerpos'],
+                'Fuerzas Ficticias y Marcos no Inerciales': ['Análisis en marcos de referencia acelerados'],
+                'Ley de Gravitación Universal': ['Fuerza de atracción entre masas', 'Campo gravitacional planetario'],
+                'Trabajo': ['Trabajo realizado por una fuerza constante', 'Trabajo neto y sus efectos'],
+                'Potencia': ['Potencia media e instantánea'],
+                'Energía Cinética': ['Relación entre trabajo y energía cinética', 'Energía de traslación y rotación'],
+                'Energía Potencial Gravitacional': ['Variaciones de energía potencial por altura'],
+                'Energía Potencial Elástica': ['Energía almacenada en un resorte'],
+                'Conservación de la Energía': ['Balance de energía mecánica', 'Transformaciones de energía'],
+                'Fuerzas No Conservativas': ['Efecto de la fricción en la energía total'],
+                'Momento Lineal': ['Aplicación del momento lineal', 'Relación con la fuerza (Segunda Ley)'],
+                'Impulso': ['Aplicación del teorema del impulso y momento'],
+                'Conservación del Momento Lineal': ['Análisis de sistemas aislados (retrocesos, etc.)'],
+                'Colisiones Elásticas e Inelásticas': ['Análisis de colisiones elásticas', 'Análisis de colisiones inelásticas'],
+                'Torque': ['Cálculo de torque respecto a un punto', 'Torque neto y aceleración angular'],
+                'Equilibrio Rotacional': ['Aplicación de las condiciones de equilibrio estático'],
+                'Centro de Gravedad': ['Localización del centro de gravedad'],
+                'Momento de Inercia': ['Cálculo del momento de inercia'],
+                'Teorema de los Ejes Paralelos': ['Aplicación del Teorema de Steiner'],
+                'Movimiento Armónico Simple': ['Análisis de periodo y frecuencia', 'Cinemática del MAS'],
+                'Péndulo Simple': ['Análisis del periodo de un péndulo'],
+                'Masa-Resorte': ['Análisis del periodo de un sistema masa-resorte'],
+                'Ecuaciones del Movimiento': ['Aplicación de las ecuaciones de posición y velocidad en MAS'],
+                'Presión y Densidad': ['Relación entre presión, fuerza y área', 'Cálculos de densidad'],
+                'Presión Hidrostática': ['Análisis de presión en fluidos en reposo'],
+                'Principio de Arquímedes': ['Análisis de flotación y fuerza de empuje'],
+                'Tensión Superficial': ['Fenómenos de tensión superficial'],
+                'Capilaridad': ['Análisis conceptual de la capilaridad'],
+                'Ecuación de Bernoulli': ['Aplicación del principio de Bernoulli'],
+                'Efecto Venturi': ['Análisis de la relación presión-velocidad'],
+                'Escalas de Temperatura': ['Conversión entre escalas termométricas'],
+                'Dilatación Térmica': ['Análisis de dilatación lineal y volumétrica'],
+                'Calorimetría': ['Transferencia de calor y calor específico'],
+                'Cambios de Fase': ['Análisis del calor latente'],
+                'Equilibrio Térmico': ['Problemas de mezclas y temperatura final'],
+                'Primera Ley de la Termodinámica': ['Balance de energía, calor y trabajo'],
+                'Segunda Ley de la Termodinámica': ['Análisis conceptual de la dirección de los procesos'],
+                'Entropía': ['Análisis conceptual del cambio de entropía'],
+                'Máquinas Térmicas': ['Análisis del ciclo de una máquina térmica'],
+                'Eficiencia Térmica': ['Cálculo de la eficiencia térmica'],
+                'Ciclo de Carnot': ['Análisis del ciclo y eficiencia de Carnot'],
+                'Ley de Coulomb': ['Fuerza entre cargas puntuales', 'Fuerza neta en un sistema de cargas'],
+                'Campo Eléctrico': ['Campo de una carga puntual', 'Fuerza sobre una carga en un campo E'],
+                'Campo Eléctrico de Cargas Puntuales': ['Superposición de campos eléctricos'],
+                'Campo Eléctrico Uniforme': ['Análisis de campos entre placas paralelas'],
+                'Superficies Equipotenciales': ['Relación entre campo y potencial'],
+                'Potencial Eléctrico': ['Potencial de un sistema de cargas'],
+                'Potencial en Campos Uniformes': ['Diferencia de potencial y campo'],
+                'Energía Potencial Eléctrica': ['Energía de un sistema de cargas'],
+                'Trabajo Eléctrico': ['Trabajo para mover cargas en un campo'],
+                'Corriente Eléctrica': ['Relación entre carga y tiempo'],
+                'Ley de Ohm': ['Aplicación de la Ley de Ohm'],
+                'Resistencia y Resistividad': ['Factores que afectan la resistencia'],
+                'Resistencia y Temperatura': ['Variación de la resistencia con la temperatura'],
+                'Capacitancia': ['Cálculo de la capacitancia'],
+                'Capacitores': ['Almacenamiento de carga y energía'],
+                'Circuitos en Serie y Paralelo': ['Análisis de circuitos con resistores', 'Análisis de circuitos con capacitores'],
+                'Leyes de Kirchhoff': ['Aplicación de la ley de nodos', 'Aplicación de la ley de mallas'],
+                'Circuitos RC': ['Análisis del proceso de carga', 'Análisis del proceso de descarga'],
+                'Constante de Tiempo': ['Significado de la constante de tiempo RC'],
+                'Fuerza Magnética sobre Cargas': ['Análisis de la fuerza de Lorentz'],
+                'Fuerza Magnética sobre Corrientes': ['Fuerza sobre un conductor en un campo B'],
+                'Campo Magnético de Conductores': ['Aplicación de la Ley de Ampere (conceptual)'],
+                'Campo Magnético de una Espira': ['Análisis del campo en el centro de una espira'],
+                'Campo Magnético de un Solenoide': ['Análisis del campo en un solenoide ideal'],
+                'Ley de Faraday': ['Análisis de la FEM inducida'],
+                'Ley de Lenz': ['Determinación del sentido de la corriente inducida'],
+                'Inducción Electromagnética': ['Aplicaciones conceptuales de la inducción'],
+                'Aplicaciones: Motores y Generadores': ['Principios de funcionamiento'],
+                'Propiedades de las Ondas': ['Relación entre velocidad, frecuencia y longitud de onda'],
+                'Periodo, Frecuencia y Longitud de Onda': ['Cálculos y conversiones'],
+                'Efecto Doppler': ['Análisis de la frecuencia aparente'],
+                'Interferencia': ['Análisis de interferencia constructiva y destructiva'],
+                'Ondas Estacionarias': ['Análisis de nodos y antinodos'],
+                'Resonancia': ['Fenómenos de resonancia en sistemas'],
+                'Reflexión': ['Aplicación de la ley de reflexión'],
+                'Refracción (Ley de Snell)': ['Análisis de la refracción de la luz'],
+                'Espejos Planos': ['Formación de imágenes en espejos planos'],
+                'Espejos Cóncavos': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de espejos'],
+                'Espejos Convexos': ['Formación de imágenes', 'Aplicación de la ecuación de espejos'],
+                'Lentes Biconvexas': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de lentes'],
+                'Lentes Bicóncavas': ['Formación de imágenes', 'Aplicación de la ecuación de lentes'],
+                'Instrumentos Ópticos': ['Análisis conceptual de instrumentos']
+            },
+            en: {
+                'Unit Conversion': ['Length conversion problems', 'Mass and time conversion problems', 'Derived unit conversion'],
+                'Significant Figures': ['Identifying significant figures', 'Operations with significant figures'],
+                'Dimensional Analysis': ['Verifying homogeneity in equations', 'Deriving formulas'],
+                'Order of Magnitude': ['Estimating orders of magnitude', 'Comparing magnitudes'],
+                'Error Calculation': ['Analysis of absolute and relative error', 'Error propagation in measurements'],
+                'Graph Analysis': ['Interpretation of x-t graphs', 'Interpretation of v-t graphs', 'Physical meaning of the slope', 'Physical meaning of the area under the curve'],
+                'Vector Components': ['Decomposition of vectors', 'Composition of a vector from its components'],
+                'Vector Addition': ['Analytical method for the resultant', 'Equilibrium conditions (zero vector)'],
+                'Scalar Product': ['Application of the scalar product', 'Angle between two vectors'],
+                'Vector Product': ['Application of the vector product', 'Magnitude and direction of the resultant vector'],
+                'Uniform Rectilinear Motion': ['Relationship between distance, velocity, and time'],
+                'Uniformly Accelerated Rectilinear Motion': ['Final velocity analysis', 'Displacement analysis', 'Problems without the time variable'],
+                'Free Fall': ['Analysis of height and fall time', 'Impact velocity'],
+                'Projectile Motion': ['Analysis of horizontal range', 'Analysis of maximum height', 'Projectile flight time'],
+                'Uniform Circular Motion': ['Analysis of tangential velocity', 'Analysis of centripetal acceleration'],
+                'Uniformly Accelerated Circular Motion': ['Rotational kinematics relationships'],
+                "Newton's First Law": ['Systems in static equilibrium', 'Systems in motion at constant velocity'],
+                "Newton's Second Law": ['Application of F=ma', 'Force and acceleration problems', 'Inertial mass analysis'],
+                "Newton's Third Law": ['Identification of action-reaction pairs', 'Systems of interacting bodies'],
+                'Friction Force': ['Analysis of static vs. kinetic friction', 'Problems on inclined planes'],
+                'Free-Body Diagrams': ['Constructing FBD for a single body', 'Constructing FBD for systems of bodies'],
+                'Fictitious Forces & Non-Inertial Frames': ['Analysis in accelerated reference frames'],
+                'Universal Law of Gravitation': ['Force of attraction between masses', 'Planetary gravitational field'],
+                'Work': ['Work done by a constant force', 'Net work and its effects'],
+                'Power': ['Average and instantaneous power'],
+                'Kinetic Energy': ['Work-kinetic energy theorem', 'Translational and rotational energy'],
+                'Gravitational Potential Energy': ['Changes in potential energy with height'],
+                'Elastic Potential Energy': ['Energy stored in a spring'],
+                'Conservation of Energy': ['Mechanical energy balance', 'Energy transformations'],
+                'Non-Conservative Forces': ['Effect of friction on total energy'],
+                'Linear Momentum': ['Application of linear momentum', 'Relation to force (Second Law)'],
+                'Impulse': ['Application of the impulse-momentum theorem'],
+                'Conservation of Linear Momentum': ['Analysis of isolated systems (recoils, etc.)'],
+                'Elastic & Inelastic Collisions': ['Analysis of elastic collisions', 'Analysis of inelastic collisions'],
+                'Torque': ['Calculation of torque about a point', 'Net torque and angular acceleration'],
+                'Rotational Equilibrium': ['Application of static equilibrium conditions'],
+                'Center of Gravity': ['Locating the center of gravity'],
+                'Moment of Inertia': ['Calculation of the moment of inertia'],
+                'Parallel Axis Theorem': ["Application of Steiner's Theorem"],
+                'Simple Harmonic Motion': ['Analysis of period and frequency', 'Kinematics of SHM'],
+                'Simple Pendulum': ['Analysis of a pendulum\'s period'],
+                'Mass-Spring System': ['Analysis of a mass-spring system\'s period'],
+                'Equations of Motion': ['Application of position and velocity equations in SHM'],
+                'Pressure & Density': ['Relationship between pressure, force, and area', 'Density calculations'],
+                'Hydrostatic Pressure': ['Analysis of pressure in fluids at rest'],
+                "Archimedes' Principle": ['Analysis of buoyancy and buoyant force'],
+                'Surface Tension': ['Surface tension phenomena'],
+                'Capillarity': ['Conceptual analysis of capillarity'],
+                "Bernoulli's Equation": ["Application of Bernoulli's principle"],
+                'Venturi Effect': ['Analysis of the pressure-velocity relationship'],
+                'Temperature Scales': ['Conversion between thermometric scales'],
+                'Thermal Expansion': ['Analysis of linear and volumetric expansion'],
+                'Calorimetry': ['Heat transfer and specific heat'],
+                'Phase Changes': ['Analysis of latent heat'],
+                'Thermal Equilibrium': ['Problems of mixtures and final temperature'],
+                'First Law of Thermodynamics': ['Energy, heat, and work balance'],
+                'Second Law of Thermodynamics': ['Conceptual analysis of the direction of processes'],
+                'Entropy': ['Conceptual analysis of entropy change'],
+                'Heat Engines': ['Analysis of a heat engine cycle'],
+                'Thermal Efficiency': ['Calculation of thermal efficiency'],
+                'Carnot Cycle': ['Analysis of the Carnot cycle and efficiency'],
+                "Coulomb's Law": ['Force between point charges', 'Net force in a system of charges'],
+                'Electric Field': ['Field of a point charge', 'Force on a charge in an E field'],
+                'Electric Field of Point Charges': ['Superposition of electric fields'],
+                'Uniform Electric Field': ['Analysis of fields between parallel plates'],
+                'Equipotential Surfaces': ['Relationship between field and potential'],
+                'Electric Potential': ['Potential of a system of charges'],
+                'Potential in Uniform Fields': ['Potential difference and field'],
+                'Electric Potential Energy': ['Energy of a system of charges'],
+                'Electric Work': ['Work to move charges in a field'],
+                'Electric Current': ['Relationship between charge and time'],
+                "Ohm's Law": ["Application of Ohm's Law"],
+                'Resistance & Resistivity': ['Factors affecting resistance'],
+                'Resistance & Temperature': ['Variation of resistance with temperature'],
+                'Capacitance': ['Calculation of capacitance'],
+                'Capacitors': ['Charge and energy storage'],
+                'Series & Parallel Circuits': ['Analysis of resistor circuits', 'Analysis of capacitor circuits'],
+                "Kirchhoff's Laws": ["Application of the node rule", "Application of the loop rule"],
+                'RC Circuits': ['Analysis of the charging process', 'Analysis of the discharging process'],
+                'Time Constant': ['Meaning of the RC time constant'],
+                'Magnetic Force on Charges': ['Analysis of the Lorentz force'],
+                'Magnetic Force on Currents': ['Force on a conductor in a B field'],
+                'Magnetic Field of Conductors': ["Application of Ampere's Law (conceptual)"],
+                'Magnetic Field of a Loop': ['Analysis of the field at the center of a loop'],
+                'Magnetic Field of a Solenoid': ['Analysis of the field in an ideal solenoid'],
+                "Faraday's Law": ['Analysis of induced EMF'],
+                "Lenz's Law": ['Determining the direction of induced current'],
+                'Electromagnetic Induction': ['Conceptual applications of induction'],
+                'Applications: Motors & Generators': ['Operating principles'],
+                'Wave Properties': ['Relationship between speed, frequency, and wavelength'],
+                'Period, Frequency & Wavelength': ['Calculations and conversions'],
+                'Doppler Effect': ['Analysis of apparent frequency'],
+                'Interference': ['Analysis of constructive and destructive interference'],
+                'Standing Waves': ['Analysis of nodes and antinodes'],
+                'Resonance': ['Resonance phenomena in systems'],
+                'Reflection': ['Application of the law of reflection'],
+                'Refraction (Snell\'s Law)': ['Analysis of light refraction'],
+                'Plane Mirrors': ['Image formation in plane mirrors'],
+                'Concave Mirrors': ['Image formation (cases)', 'Application of the mirror equation'],
+                'Convex Mirrors': ['Image formation', 'Application of the mirror equation'],
+                'Biconvex Lenses': ['Image formation (cases)', 'Application of the lens equation'],
+                'Biconcave Lenses': ['Image formation', 'Application of the lens equation'],
+                'Optical Instruments': ['Conceptual analysis of instruments']
+            }
+        };
+        
+        const difficultyLevels = {
+            es: ['Análisis Conceptual', 'Fundamental', 'Intermedio', 'Avanzado', 'Estilo Examen (AP)', 'Basado en Cálculo'],
+            en: ['Conceptual Analysis', 'Fundamental', 'Intermediate', 'Advanced', 'Exam Style (AP)', 'Calculus-Based']
+        };
+
+        // --- NEW Difficulty Definitions ---
+        const difficultyDefinitions = {
+            es: {
+                'Análisis Conceptual': 'Problemas cualitativos sin cálculos. Evalúan comprensión teórica y razonamiento lógico sobre conceptos físicos. Suelen ser de opción múltiple o verdadero/falso.',
+                'Fundamental': 'Problemas directos de una sola etapa que implican la aplicación de una fórmula básica con todos los datos dados. No requieren razonamiento complejo ni múltiples pasos.',
+                'Intermedio': 'Problemas que combinan al menos dos fórmulas o conceptos. Requieren más de un paso para resolverse, pero no involucran hipótesis ni análisis profundo.',
+                'Avanzado': 'Problemas que exigen razonamiento multietapa, análisis de escenarios hipotéticos, comparaciones físicas o desarrollo simbólico. Pueden implicar expresiones algebraicas y evaluación de condiciones cambiantes.',
+                'Estilo Examen (AP)': 'Problemas estructurados en partes (a, b, c), con componentes tanto cualitativos como cuantitativos. Simulan el formato y profundidad de exámenes tipo AP, incluyendo justificaciones, interpretaciones gráficas o desarrollo secuencial.',
+                'Basado en Cálculo': 'Problemas que requieren el uso de cálculo diferencial o integral. Involucran funciones, derivadas, integrales, y análisis continuo de magnitudes físicas como posición, velocidad, aceleración o trabajo.'
+            },
+            en: {
+                'Conceptual Analysis': 'Qualitative problems without calculations. They assess theoretical understanding and logical reasoning about physical concepts. They are usually multiple-choice or true/false.',
+                'Fundamental': 'Direct, single-step problems involving the application of a basic formula with all data given. They do not require complex reasoning or multiple steps.',
+                'Intermediate': 'Problems that combine at least two formulas or concepts. They require more than one step to solve but do not involve hypotheses or in-depth analysis.',
+                'Advanced': 'Problems that demand multi-step reasoning, analysis of hypothetical scenarios, physical comparisons, or symbolic development. They may involve algebraic expressions and evaluation of changing conditions.',
+                'Exam Style (AP)': 'Problems structured in parts (a, b, c), with both qualitative and quantitative components. They simulate the format and depth of AP-type exams, including justifications, graphical interpretations, or sequential development.',
+                'Calculus-Based': 'Problems that require the use of differential or integral calculus. They involve functions, derivatives, integrals, and continuous analysis of physical quantities such as position, velocity, acceleration, or work.'
+            }
+        };
+
+        // --- UI Components ---
+        
+        const LanguageSwitcher = () => {
+            const { lang, setLang } = useLanguage();
+            const toggleLanguage = () => {
+                setLang(lang === 'es' ? 'en' : 'es');
+            };
+            return (
+                <button 
+                    onClick={toggleLanguage} 
+                    className="p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 font-bold text-sm transition-colors"
+                    aria-label="Change language"
+                >
+                    {lang === 'es' ? 'EN' : 'ES'}
+                </button>
+            );
+        };
+
+        const ThemeSwitcher = () => {
+            const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (isDarkMode) {
+                    root.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    root.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            }, [isDarkMode]);
+            return (
+                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-xl transition-colors" aria-label={isDarkMode ? "Activar modo claro" : "Activar modo oscuro"}>
+                    {isDarkMode ? '☀️' : '🌙'}
+                </button>
+            );
+        };
+
+        const ScreenWrapper = ({ children }) => (
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="p-4 md:p-6">
+                {children}
+            </motion.div>
+        );
+        
+        const LandingScreen = ({ onSelectFlow }) => {
+            const { t } = useLanguage();
+            return (
+            <ScreenWrapper>
+                <div className="text-center max-w-2xl mx-auto py-8">
+                    <img src="https://i.imgur.com/xxSJi3F.jpeg" alt="PhysicLabAI Logo" className="mx-auto h-24 w-auto mb-4" />
+                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-3">{t('welcomeTitle')}</h1>
+                    <p className="text-lg text-gray-600 dark:text-gray-400 mb-12">{t('welcomeSubtitle')}</p>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <motion.div whileHover={{ scale: 1.05, y: -5 }} className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                            <div className="text-5xl mb-4">📚</div>
+                            <h2 className="text-2xl font-bold mb-2">{t('exploreTopics')}</h2>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">{t('exploreDescription')}</p>
+                            <button onClick={() => onSelectFlow('content')} className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300">
+                                {t('startLearning')}
+                            </button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.05, y: -5 }} className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                            <div className="text-5xl mb-4">✍️</div>
+                            <h2 className="text-2xl font-bold mb-2">{t('practiceProblems')}</h2>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">{t('practiceDescription')}</p>
+                            <button onClick={() => onSelectFlow('problems')} className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg shadow-md hover:bg-gray-900 transition-colors duration-300 dark:bg-green-600 dark:hover:bg-green-700">
+                                {t('solveProblems')}
+                            </button>
+                        </motion.div>
+                    </div>
+                </div>
+            </ScreenWrapper>
+        )};
+
+        const CategoryScreen = ({ onCategorySelect, onBack }) => {
+            const { lang, t } = useLanguage();
+            return (
+            <ScreenWrapper>
+                <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToHome')}</button>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t('physicsCategories')}</h2>
+                <div className="space-y-3">
+                    {topicCategories[lang].map(cat => (
+                        <button key={cat.category} onClick={() => onCategorySelect(cat)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                            {cat.category}
+                        </button>
+                    ))}
+                </div>
+            </ScreenWrapper>
+        )};
+
+        const TopicsScreen = ({ category, onTopicSelect, onBack }) => {
+            const { t } = useLanguage();
+            return (
+            <ScreenWrapper>
+                <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToCategories')}</button>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t('topicsOf')} {category.category}</h2>
+                <div className="space-y-3">
+                    {category.topics.map(topic => (
+                        <button key={topic.name} onClick={() => onTopicSelect(topic)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                            {topic.name}
+                        </button>
+                    ))}
+                </div>
+            </ScreenWrapper>
+        )};
+
+        const SubtopicsScreen = ({ topic, onSubtopicSelect, onBack }) => {
+            const { t } = useLanguage();
+            return (
+            <ScreenWrapper>
+                <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToTopics')}</button>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t('subtopicsOf')} {topic.name}</h2>
+                <div className="space-y-3">
+                    {topic.subtopics.map(subtopic => (
+                        <button key={subtopic} onClick={() => onSubtopicSelect(subtopic)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                            {subtopic}
+                        </button>
+                    ))}
+                </div>
+            </ScreenWrapper>
+        )};
+        
+        const GraphRenderer = ({ data }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                if (chartRef.current && data) {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                    const isDarkMode = document.documentElement.classList.contains('dark');
+                    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                    const textColor = isDarkMode ? '#d1d5db' : '#4b5563';
+                    const titleColor = isDarkMode ? '#f3f4f6' : '#111827';
+
+                    const ctx = chartRef.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: data.chartType || 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: data.datasets.map(ds => ({
+                                ...ds,
+                                tension: 0.1,
+                                fill: false,
+                                borderWidth: 2,
+                                pointRadius: 3,
+                                pointHoverRadius: 5,
+                            }))
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: data.title,
+                                    font: { size: 16 },
+                                    color: titleColor
+                                },
+                                legend: {
+                                    labels: {
+                                        color: textColor
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: data.xAxisLabel,
+                                        color: textColor
+                                    },
+                                    ticks: { color: textColor },
+                                    grid: { color: gridColor }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: data.yAxisLabel,
+                                        color: textColor
+                                    },
+                                    ticks: { color: textColor },
+                                    grid: { color: gridColor }
+                                }
+                            }
+                        }
+                    });
+                }
+                return () => {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                };
+            }, [data]);
+
+            return <div className="relative h-64 md:h-80 my-6"><canvas ref={chartRef}></canvas></div>;
+        };
+
+        const ContentDisplayScreen = ({ topicName, subtopic, onBack, onTutorRequest }) => {
+            const [content, setContent] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState('');
+            const { lang, t } = useLanguage();
+
+            const generateContent = useCallback(async () => {
+                setIsLoading(true);
+                setError('');
+                
+                const guideSchema = {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            type: { type: "STRING", enum: ["heading1", "heading2", "paragraph", "formula", "example", "graph"] },
+                            content: { type: "STRING" },
+                            data: {
+                                type: "OBJECT",
+                                properties: {
+                                    chartType: { type: "STRING" },
+                                    title: { type: "STRING" },
+                                    xAxisLabel: { type: "STRING" },
+                                    yAxisLabel: { type: "STRING" },
+                                    labels: { type: "ARRAY", items: { type: "STRING" } },
+                                    datasets: {
+                                        type: "ARRAY",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                label: { type: "STRING" },
+                                                data: { type: "ARRAY", items: { type: "NUMBER" } },
+                                                borderColor: { type: "STRING" },
+                                                backgroundColor: { type: "STRING" }
+                                            },
+                                            required: ["label", "data", "borderColor", "backgroundColor"]
+                                        }
+                                    }
+                                },
+                                required: ["chartType", "title", "xAxisLabel", "yAxisLabel", "labels", "datasets"]
+                            }
+                        },
+                        required: ["type"]
+                    }
+                };
+
+                const prompt = `**Task:** Generate a physics study guide in a structured JSON format.
+**Role:** You are a physics expert and textbook author. Your tone should be formal, clear, and encyclopedic.
+**Topic:** "${subtopic}" (within the general area of "${topicName}") for a high school student.
+**Language:** The entire output, including all content, must be in ${lang === 'es' ? 'Spanish' : 'English'}.
+
+**Formatting and Content Instructions (VERY STRICT):**
+1.  **Output Format:** The output MUST be a valid JSON object matching the provided schema. It must be an array of objects.
+2.  **Block Types and LaTeX Rules:**
+    * \`"type": "heading1"\`: For the main title (the sub-topic name).
+    * \`"type": "heading2"\`: For subtitles like "Introduction", "Key Formula", "Example", "Summary".
+    * \`"type": "paragraph"\`: For explanatory text. For any mathematical notation within a paragraph, you MUST use inline LaTeX delimiters (\`$...\$\`).
+    * \`"type": "formula"\`: For mathematical equations. The "content" field must contain only the LaTeX code, without \`$\` delimiters.
+    * \`"type": "example"\`: For solved examples. The "content" field must be formatted with \`**${lang === 'es' ? 'Planteamiento' : 'Approach'}:**\`, \`**${lang === 'es' ? 'Sustitución' : 'Substitution'}:**\`, and \`**${lang === 'es' ? 'Resultado' : 'Result'}:**\`. **CRITICAL LATEX RULE:** Within the example content, ALL mathematical notation (variables, numbers with units, equations) MUST be wrapped in inline LaTeX delimiters (\`$...\$\`). For example: \`$F = m \\times a$\`, \`$10 \\text{ kg}$\`, \`$\\mu_s = 0.3$\`.
+    * \`"type": "graph"\`: **ONLY if the topic explicitly requires it** (e.g., kinematics graphs), include a block of this type. Provide realistic data.
+3.  **Additional Rule:** The guide must be purely algebraic and conceptual. **IT MUST NOT USE DIFFERENTIAL OR INTEGRAL CALCULUS.**
+4.  **Tone:** Absolutely formal and academic.`;
+
+                try {
+                    const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                    const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: guideSchema } };
+                    const apiKey = ""; // API key will be injected in the execution environment
+                    const modelName = 'gemini-2.5-flash-preview-05-20';
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
+                    const result = await response.json();
+                    if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0].text) {
+                        const parsedContent = JSON.parse(result.candidates[0].content.parts[0].text);
+                        setContent(parsedContent);
+                    } else {
+                        throw new Error("The AI did not generate a valid response.");
+                    }
+                } catch (e) {
+                    console.error("Content API Error:", e);
+                    setError("Could not generate content. Please try again later.");
+                } finally {
+                    setIsLoading(false);
+                }
+            }, [topicName, subtopic, lang]);
+
+            useEffect(() => {
+                generateContent();
+            }, [generateContent]);
+
+            const renderContentBlock = (block, index) => {
+                switch (block.type) {
+                    case 'heading1':
+                        return <h1 key={index}>{block.content}</h1>;
+                    case 'heading2':
+                        return <h2 key={index}>{block.content}</h2>;
+                    case 'paragraph':
+                        return <p key={index}><ContentRenderer content={block.content} /></p>;
+                    case 'formula':
+                        return <div key={index} className="flex justify-center"><ContentRenderer content={`$$${block.content}$$`} /></div>;
+                    case 'example':
+                        return <p key={index}><ContentRenderer content={block.content} /></p>;
+                    case 'graph':
+                        return <GraphRenderer key={index} data={block.data} />;
+                    default:
+                        return null;
+                }
+            };
+
+            return (
+                <ScreenWrapper>
+                    <div className="max-w-4xl mx-auto">
+                        <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6">&larr; {t('backToSubtopics')}</button>
+                        
+                        <div className="bg-white dark:bg-gray-800 p-8 md:p-12 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
+                            {isLoading && <div className="animate-pulse space-y-6"><div className="h-10 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div><div className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div><div className="space-y-3"><div className="h-4 bg-gray-300 dark:bg-gray-700 rounded"></div><div className="h-4 bg-gray-300 dark:bg-gray-700 rounded"></div><div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div></div></div>}
+                            {error && <div className="text-red-500 font-semibold">{error}</div>}
+                            {!isLoading && !error && (
+                                <div className="academic-document text-gray-800 dark:text-gray-300">
+                                    {content.map(renderContentBlock)}
+                                    <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
+                                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{t('doYouHaveQuestions')}</h2>
+                                        <button onClick={onTutorRequest} className="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300">
+                                            {t('askAITutor')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </ScreenWrapper>
+            );
+        };
+        
+        const Modal = ({ title, children, onClose }) => (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="modal-overlay">
+                <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} className="modal-content">
+                    <div className="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
+                        <h2 className="text-2xl font-bold">{title}</h2>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-800 text-3xl">&times;</button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2">{children}</div>
+                </motion.div>
+            </motion.div>
+        );
+
+        const AITutor = ({ context, onClose }) => {
+            const [chat, setChat] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+            const inputRef = useRef(null);
+            const chatEndRef = useRef(null);
+            const { lang, t } = useLanguage();
+
+            useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat]);
+
+            const handleQuery = async (userInput) => {
+                if (!userInput.trim() || isLoading) return;
+                const newChat = [...chat, { role: 'user', text: userInput }];
+                setChat(newChat);
+                setIsLoading(true);
+                inputRef.current.value = '';
+                
+                const prompt = context.type === 'problem' 
+                    ? `You are an expert physics tutor. A student is solving this problem: "${context.text}". Their question is: "${userInput}". Guide them to understand the concept without giving the answer directly. Use LaTeX for all formulas. Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`
+                    : `You are an expert physics tutor. A student is reading a guide about '${context.topicName}'. Their question is: '${userInput}'. Answer concisely and directly, helping them understand the concept related to their question. Use LaTeX for all formulas. Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`;
+
+                try {
+                    const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; // API key will be injected in the execution environment
+                    const modelName = 'gemini-2.5-flash-preview-05-20';
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
+                    const result = await response.json();
+                    const aiResponse = result.candidates[0].content.parts[0].text;
+                    setChat(prev => [...prev, { role: 'ai', text: aiResponse }]);
+                } catch (e) {
+                    setChat(prev => [...prev, { role: 'ai', text: t('aiTutorError') }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <Modal title={t('aiTutor')} onClose={onClose}>
+                    <div className="flex flex-col h-full" style={{minHeight: '60vh'}}>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-4 mb-4 bg-gray-100 dark:bg-gray-900 rounded-md">
+                            {chat.map((msg, index) => (
+                                <div key={index} className={`p-3 rounded-lg max-w-xs md:max-w-md ${msg.role === 'user' ? 'bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-blue-100 ml-auto' : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
+                                    <ContentRenderer content={msg.text} />
+                                </div>
+                            ))}
+                            {isLoading && <div className="p-3 text-center text-gray-500">{t('aiTutorAnalyzing')}</div>}
+                            <div ref={chatEndRef} />
+                        </div>
+                        <div className="flex gap-2">
+                            <input type="text" ref={inputRef} className="flex-grow bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('typeYourQuestion')} onKeyPress={(e) => e.key === 'Enter' && handleQuery(e.target.value)} disabled={isLoading} />
+                            <button onClick={() => handleQuery(inputRef.current.value)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400" disabled={isLoading}>{t('send')}</button>
+                        </div>
+                    </div>
+                </Modal>
+            );
+        };
+        
+        // --- UPDATED Prompt Generation with Difficulty Definitions ---
+        const getProblemIntelligentPrompt = (subtopic, variation, difficulty, lang) => {
+            const randomFactor = Math.random();
+            const definition = difficultyDefinitions[lang][difficulty] || '';
+
+            let basePrompt = `You are an expert physics professor. Your task is to generate a unique and creative physics problem. The problem's characteristics must match the following difficulty definition:\n\n**Difficulty Level: ${difficulty}**\n**Definition:** ${definition}\n\n`;
+
+            const specificInstructions = `**Critical Content and Variety Instructions:**
+1.  **Main Topic:** The problem must be about **${subtopic}**.
+2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
+3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
+4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario.
+5.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
+\n`;
+            
+            const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
+1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
+2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
+3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
+4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors.
+5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
+
+            return `${basePrompt}${specificInstructions}${rules}`;
+        };
+
+        const ProblemSolverFlow = ({ onBackToHome }) => {
+            const [currentView, setCurrentView] = useState('categories');
+            const [selection, setSelection] = useState({});
+            const [modal, setModal] = useState({ isOpen: false, type: null, context: null });
+            const { lang, t } = useLanguage();
+
+            const handleCategorySelect = (category) => { setSelection(prev => ({ ...prev, category })); setCurrentView('topics'); };
+            const handleTopicSelect = (topic) => { setSelection(prev => ({ ...prev, topic })); setCurrentView('subtopics'); };
+            const handleSubtopicSelect = (subtopic) => {
+                setSelection(prev => ({ ...prev, subtopic }));
+                setCurrentView('variation');
+            };
+            const handleVariationSelect = (variation) => { setSelection(prev => ({ ...prev, variation })); setCurrentView('difficulty'); };
+            const handleDifficultySelect = (difficulty) => {
+                setSelection(prev => ({ ...prev, difficulty }));
+                setCurrentView('problem');
+            };
+            
+            const handleBack = () => {
+                if (currentView === 'problem') setCurrentView('difficulty');
+                else if (currentView === 'difficulty') setCurrentView('variation');
+                else if (currentView === 'variation') setCurrentView('subtopics');
+                else if (currentView === 'subtopics') setCurrentView('topics');
+                else if (currentView === 'topics') setCurrentView('categories');
+                else if (currentView === 'categories') onBackToHome();
+            };
+
+            const VariationScreen = ({ topic, subtopic, onVariationSelect, onBack }) => {
+                return (
+                   <ScreenWrapper>
+                       <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToSubtopics')}</button>
+                       <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
+                       <p className="text-gray-500 dark:text-gray-400 mb-6">{topic.name}</p>
+                       <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{t('selectProblemType')}</h3>
+                       <div className="space-y-3">
+                           {(problemVariations[lang][subtopic] || []).map(variation => (
+                               <button key={variation} onClick={() => onVariationSelect(variation)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                                 <ContentRenderer content={variation} />
+                               </button>
+                           ))}
+                       </div>
+                   </ScreenWrapper>
+            )};
+        
+            const DifficultyScreen = ({ topic, subtopic, variation, onDifficultySelect, onBack }) => {
+                return (
+                <ScreenWrapper>
+                    <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToProblemType')}</button>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mb-2">{topic.name}</p>
+                    <div className="text-gray-500 dark:text-gray-400 mb-6">
+                        <ContentRenderer content={variation} />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{t('selectDifficulty')}</h3>
+                    <div className="space-y-3">
+                        {difficultyLevels[lang].map(level => (
+                            <button key={level} onClick={() => onDifficultySelect(level)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                                {level}
+                            </button>
+                        ))}
+                    </div>
+                </ScreenWrapper>
+            )};
+
+            const ProblemScreen = ({ topic, subtopic, variation, difficulty, onBack, onTutorRequest }) => {
+                const [problem, setProblem] = useState(null);
+                const [isLoading, setIsLoading] = useState(true);
+                const [error, setError] = useState('');
+                const [selectedOption, setSelectedOption] = useState(null);
+                const [feedback, setFeedback] = useState(null);
+
+                const generateProblemAPI = useCallback(async () => {
+                    const prompt = getProblemIntelligentPrompt(subtopic, variation, difficulty, lang);
+                    let problemSchema = { type: "OBJECT", properties: { "question": { "type": "STRING" }, "options": { "type": "ARRAY", "items": { "type": "STRING" } }, "correctAnswerIndex": { "type": "INTEGER" }, "solution": { "type": "ARRAY", "items": { "type": "STRING" } }}, required: ["question", "options", "correctAnswerIndex", "solution"] };
+                    
+                    try {
+                        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                        const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: problemSchema } };
+                        const apiKey = ""; // API key will be injected in the execution environment
+                        const modelName = 'gemini-2.5-flash-preview-05-20'; 
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
+                        const result = await response.json();
+                        if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0].text) {
+                            const rawText = result.candidates[0].content.parts[0].text;
+                            const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                            try {
+                                return JSON.parse(cleanedText);
+                            } catch (parseError) {
+                                console.error("Failed to parse JSON response:", cleanedText);
+                                throw new Error("The AI generated a response with incorrect format.");
+                            }
+                        } else { throw new Error("The AI did not generate a valid response."); }
+                    } catch (e) {
+                        console.error("API Error:", e);
+                        throw e;
+                    }
+                }, [subtopic, variation, difficulty, lang]);
+
+                const loadProblem = useCallback(async () => {
+                    setIsLoading(true);
+                    setProblem(null);
+                    setSelectedOption(null);
+                    setFeedback(null);
+                    setError('');
+                    
+                    try {
+                        const problemFromApi = await generateProblemAPI();
+                        if (!problemFromApi) return;
+                        
+                        const options = [...problemFromApi.options];
+                        const correctAnswer = options[0]; 
+                        for (let i = options.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [options[i], options[j]] = [options[j], options[i]];
+                        }
+                        const newCorrectIndex = options.indexOf(correctAnswer);
+                        
+                        setProblem({ ...problemFromApi, options: options, correctAnswerIndex: newCorrectIndex });
+                    } catch (e) {
+                        setError(e.message);
+                    } finally {
+                        setIsLoading(false);
+                    }
+                }, [generateProblemAPI]);
+                
+                useEffect(() => { loadProblem(); }, [loadProblem]);
+                
+                const handleCheckAnswer = () => {
+                    if (selectedOption === null) return;
+                    const isCorrect = selectedOption === problem.correctAnswerIndex;
+                    setFeedback({ isCorrect, solution: problem.solution, correctAnswer: problem.options[problem.correctAnswerIndex] });
+                };
+                
+                return (
+                    <ScreenWrapper>
+                        <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToDifficulty')}</button>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">{topic.name}</p>
+
+                        {isLoading && <div className="animate-pulse"><div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"><div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-4"></div><div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full mb-2"></div><div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-5/6 mb-8"></div><div className="space-y-3"><div className="h-14 bg-gray-300 dark:bg-gray-700 rounded-lg"></div><div className="h-14 bg-gray-300 dark:bg-gray-700 rounded-lg"></div><div className="h-14 bg-gray-300 dark:bg-gray-700 rounded-lg"></div><div className="h-14 bg-gray-300 dark:bg-gray-700 rounded-lg"></div></div></div></div>}
+                        {error && <div className="text-red-500 font-semibold p-4 bg-red-100 dark:bg-red-900/50 rounded-md">{error}</div>}
+                        
+                        <AnimatePresence mode="wait">
+                            {!isLoading && problem && (
+                                <motion.div 
+                                    key={problem.question}
+                                    initial={{ opacity: 0, x: 50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -50 }}
+                                    transition={{ duration: 0.3, ease: "circOut" }}
+                                >
+                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                                        <div className="mb-6"><ContentRenderer content={problem.question} /></div>
+                                        <div className="space-y-3 mb-6">
+                                            {problem.options.map((option, index) => (
+                                                <div key={index} role="button" tabIndex={feedback ? -1 : 0} onClick={() => !feedback && setSelectedOption(index)} className={`w-full border-2 text-left font-medium p-4 rounded-lg transition-all duration-200 ${selectedOption === index && !feedback ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'} ${feedback ? 'cursor-not-allowed' : ''} ${feedback && problem.correctAnswerIndex === index ? '!bg-green-100 dark:!bg-green-800/40 !border-green-500' : ''} ${feedback && selectedOption === index && !feedback.isCorrect ? '!bg-red-100 dark:!bg-red-800/40 !border-red-500' : ''}`}>
+                                                    <ContentRenderer content={option} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {!feedback && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <button onClick={() => onTutorRequest(problem.question)} className="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">{t('aiTutor')}</button>
+                                                <button onClick={handleCheckAnswer} className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-gray-900 transition-colors dark:bg-blue-600 dark:hover:bg-blue-700">{t('checkAnswer')}</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                            {feedback && (
+                                <motion.div key="feedback" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 p-6 rounded-lg border-t dark:border-gray-700 mt-6">
+                                    <h2 className={`text-2xl font-bold mb-4 ${feedback.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                        {feedback.isCorrect ? t('correctAnswer') : t('incorrectAnswer')}
+                                    </h2>
+                                    {!feedback.isCorrect && <div className="mb-4">{t('theCorrectAnswerWas')} <ContentRenderer content={feedback.correctAnswer} /></div>}
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 border-t pt-4 mt-4 dark:border-gray-700">{t('solution')}:</h3>
+                                    <ul className="space-y-4">
+                                        {feedback.solution.map((step, index) => (
+                                            <li key={index}><ContentRenderer content={step} /></li>
+                                        ))}
+                                    </ul>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <button onClick={loadProblem} disabled={isLoading} className="w-full mt-6 bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-blue-700 transition-colors disabled:bg-gray-500">
+                            {isLoading ? <span className="flex items-center justify-center"><div className="spinner mr-2"></div>{t('generating')}...</span> : t('generateAnotherProblem')}
+                        </button>
+                    </ScreenWrapper>
+                );
+            };
+
+            const renderContent = () => {
+                switch (currentView) {
+                    case 'categories': return <CategoryScreen key="categories" onCategorySelect={handleCategorySelect} onBack={onBackToHome} />;
+                    case 'topics': return <TopicsScreen key="topics" category={selection.category} onTopicSelect={handleTopicSelect} onBack={handleBack} />;
+                    case 'subtopics': return <SubtopicsScreen key="subtopics" topic={selection.topic} onSubtopicSelect={handleSubtopicSelect} onBack={handleBack} />;
+                    case 'variation': return <VariationScreen key="variation" {...selection} onVariationSelect={handleVariationSelect} onBack={handleBack} />;
+                    case 'difficulty': return <DifficultyScreen key="difficulty" {...selection} onDifficultySelect={handleDifficultySelect} onBack={handleBack} />;
+                    case 'problem': return <ProblemScreen key="problem" {...selection} onBack={handleBack} onTutorRequest={(ctx) => setModal({ isOpen: true, type: 'tutor', context: { type: 'problem', text: ctx }})} />;
+                    default: return <CategoryScreen key="categories" onCategorySelect={handleCategorySelect} onBack={onBackToHome} />;
+                }
+            };
+            
+            return (
+                <>
+                    <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
+                    <AnimatePresence>
+                        {modal.isOpen && modal.type === 'tutor' && <AITutor context={modal.context} onClose={() => setModal({ isOpen: false })} />}
+                    </AnimatePresence>
+                </>
+            );
+        };
+
+        const ContentFlow = ({ onBackToHome }) => {
+            const [currentView, setCurrentView] = useState('categories');
+            const [selection, setSelection] = useState({});
+            const [modal, setModal] = useState({ isOpen: false, type: null, context: null });
+
+            const handleCategorySelect = (category) => { setSelection(prev => ({ ...prev, category })); setCurrentView('topics'); };
+            const handleTopicSelect = (topic) => { setSelection(prev => ({ ...prev, topic })); setCurrentView('subtopics'); };
+            const handleSubtopicSelect = (subtopic) => { 
+                setSelection(prev => ({ ...prev, subtopic })); 
+                setCurrentView('contentDisplay'); 
+            };
+            
+            const handleBack = () => {
+                if (currentView === 'contentDisplay') setCurrentView('subtopics');
+                else if (currentView === 'subtopics') setCurrentView('topics');
+                else if (currentView === 'topics') setCurrentView('categories');
+                else if (currentView === 'categories') onBackToHome();
+            };
+
+            const renderContent = () => {
+                switch (currentView) {
+                    case 'categories': return <CategoryScreen key="categories" onCategorySelect={handleCategorySelect} onBack={onBackToHome} />;
+                    case 'topics': return <TopicsScreen key="topics" category={selection.category} onTopicSelect={handleTopicSelect} onBack={handleBack} />;
+                    case 'subtopics': return <SubtopicsScreen key="subtopics" topic={selection.topic} onSubtopicSelect={handleSubtopicSelect} onBack={handleBack} />;
+                    case 'contentDisplay': return <ContentDisplayScreen key="content" {...selection} topicName={selection.topic.name} onBack={handleBack} onTutorRequest={() => setModal({ isOpen: true, type: 'tutor', context: { type: 'content', topicName: selection.subtopic } })} />;
+                    default: return <CategoryScreen key="categories" onCategorySelect={handleCategorySelect} onBack={onBackToHome} />;
+                }
+            };
+
+            return (
+                <>
+                    <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
+                    <AnimatePresence>
+                        {modal.isOpen && modal.type === 'tutor' && <AITutor context={modal.context} onClose={() => setModal({ isOpen: false })} />}
+                    </AnimatePresence>
+                </>
+            );
+        };
+
+        const Footer = ({ onNavigate }) => {
+            const { t } = useLanguage();
+            return (
+            <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <p>&copy; {new Date().getFullYear()} PhysicLabAI. {t('allRightsReserved')}</p>
+                <div className="mt-2">
+                    <a href="#/terms" onClick={(e) => onNavigate(e, '/terms')} className="underline hover:text-gray-800 dark:hover:text-white mx-2">{t('termsOfUse')}</a>
+                    <span className="mx-1">|</span>
+                    <a href="#/privacy" onClick={(e) => onNavigate(e, '/privacy')} className="underline hover:text-gray-800 dark:hover:text-white mx-2">{t('privacyPolicy')}</a>
+                </div>
+            </footer>
+        )};
+
+        const LegalPage = ({ title, children, onNavigate }) => {
+            const { t } = useLanguage();
+            return (
+             <ScreenWrapper>
+                <div className="max-w-3xl mx-auto p-6">
+                     <button onClick={(e) => onNavigate(e, '/')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8">&larr; {t('backToHome')}</button>
+                     <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg prose dark:prose-invert">
+                        <h1>{title}</h1>
+                        {children}
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            {t('lastUpdated')}: julio de 2025.
+                        </p>
+                     </div>
+                </div>
+            </ScreenWrapper>
+        )};
+
+        // --- Main App Component ---
+        const App = () => {
+            const getCurrentPath = () => window.location.hash.substring(1) || '/';
+            const [path, setPath] = useState(getCurrentPath());
+            const [currentFlow, setCurrentFlow] = useState('landing');
+            const { t, lang } = useLanguage();
+
+            useEffect(() => {
+                const handleHashChange = () => {
+                    setPath(getCurrentPath());
+                };
+                window.addEventListener('hashchange', handleHashChange);
+                return () => {
+                    window.removeEventListener('hashchange', handleHashChange);
+                };
+            }, []);
+
+            const handleNavigate = (e, targetPath) => {
+                if (e) e.preventDefault();
+                window.location.hash = targetPath;
+                if (targetPath === '/') {
+                    setCurrentFlow('landing');
+                }
+            };
+            
+            const handleSelectFlow = (flow) => {
+                setCurrentFlow(flow);
+                if (path !== '/') {
+                    window.location.hash = '/';
+                }
+            };
+            
+            const legalContent = {
+                es: {
+                    terms: (
+                        <div className="legal-text">
+                            <h3>1. Aceptación de los Términos</h3>
+                            <p>Bienvenido a PhysicLabAI. Al utilizar esta aplicación, usted acepta cumplir y estar sujeto a los siguientes términos y condiciones de uso. Por favor, revíselos cuidadosamente.</p>
+                            <h3>2. Propósito Educativo</h3>
+                            <p>PhysicLabAI es una herramienta diseñada exclusivamente con fines educativos. Su objetivo es servir como un asistente de aprendizaje para estudiantes de física. El contenido, los problemas y las soluciones proporcionadas no deben ser considerados como asesoramiento profesional o académico infalible.</p>
+                            <h3>3. Uso de Inteligencia Artificial</h3>
+                            <p>Esta aplicación utiliza la API de Gemini de Google para generar guías de estudio, problemas y soluciones. Como toda herramienta de inteligencia artificial, la información generada puede contener imprecisiones, errores o no ser completa. Los usuarios son responsables de verificar y validar la información obtenida a través de la aplicación con fuentes académicas confiables.</p>
+                            <h3>4. Responsabilidad del Usuario</h3>
+                            <p>Usted es responsable de su propio aprendizaje. PhysicLabAI es un complemento, no un sustituto, de la instrucción formal, los libros de texto y la orientación de un profesor cualificado. No garantizamos la exactitud o fiabilidad del contenido generado por la IA.</p>
+                            <h3>5. Propiedad Intelectual</h3>
+                            <p>La estructura, el diseño y la interfaz de la aplicación son propiedad de sus creadores. El contenido generado es producto de la API de Gemini y está sujeto a sus políticas.</p>
+                        </div>
+                    ),
+                    privacy: (
+                        <div className="legal-text">
+                            <h3>1. Introducción</h3>
+                            <p>Su privacidad es importante para nosotros. Esta Política de Privacidad explica cómo manejamos la información en PhysicLabAI.</p>
+                            <h3>2. Información que No Recopilamos</h3>
+                            <p>No recopilamos, solicitamos ni almacenamos ninguna información de identificación personal (PII). Esto incluye, entre otros, su nombre, dirección de correo electrónico, número de teléfono o ubicación.</p>
+                            <h3>3. Datos de Interacción Anónimos</h3>
+                            <p>Para mejorar la funcionalidad y la experiencia del usuario, podemos recopilar datos de interacción completamente anónimos. Esto puede incluir:</p>
+                            <ul>
+                                <li>Los temas y subtemas que se consultan con más frecuencia.</li>
+                                <li>Los niveles de dificultad seleccionados.</li>
+                                <li>Información sobre errores de la aplicación para poder corregirlos.</li>
+                            </ul>
+                            <p>Estos datos son agregados y no pueden ser vinculados a un usuario individual. El único propósito de esta recopilación es mejorar la calidad de nuestro servicio.</p>
+                            <h3>4. API de Terceros (Google Gemini)</h3>
+                            <p>Las consultas que usted realiza para generar contenido o chatear con el tutor de IA se envían a la API de Gemini de Google. El manejo de estos datos por parte de Google está sujeto a sus propias políticas de privacidad. Le recomendamos revisarlas para entender cómo procesan la información.</p>
+                            <h3>5. Cambios en la Política</h3>
+                            <p>Podemos actualizar esta política de privacidad ocasionalmente. Le notificaremos de cualquier cambio publicando la nueva política en esta página.</p>
+                        </div>
+                    )
+                },
+                en: {
+                    terms: (
+                         <div className="legal-text">
+                            <h3>1. Acceptance of Terms</h3>
+                            <p>Welcome to PhysicLabAI. By using this application, you agree to comply with and be bound by the following terms and conditions of use. Please review them carefully.</p>
+                            <h3>2. Educational Purpose</h3>
+                            <p>PhysicLabAI is a tool designed exclusively for educational purposes. Its goal is to serve as a learning assistant for physics students. The content, problems, and solutions provided should not be considered infallible professional or academic advice.</p>
+                            <h3>3. Use of Artificial Intelligence</h3>
+                            <p>This application uses Google's Gemini API to generate study guides, problems, and solutions. Like any artificial intelligence tool, the generated information may contain inaccuracies, errors, or may not be complete. Users are responsible for verifying and validating the information obtained through the application with reliable academic sources.</p>
+                            <h3>4. User Responsibility</h3>
+                            <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
+                            <h3>5. Intellectual Property</h3>
+                            <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
+                        </div>
+                    ),
+                    privacy: (
+                        <div className="legal-text">
+                            <h3>1. Introduction</h3>
+                            <p>Your privacy is important to us. This Privacy Policy explains how we handle information in PhysicLabAI.</p>
+                            <h3>2. Information We Do Not Collect</h3>
+                            <p>We do not collect, request, or store any personally identifiable information (PII). This includes, but is not limited to, your name, email address, phone number, or location.</p>
+                            <h3>3. Anonymous Interaction Data</h3>
+                            <p>To improve functionality and user experience, we may collect completely anonymous interaction data. This may include:</p>
+                            <ul>
+                                <li>The most frequently consulted topics and sub-topics.</li>
+                                <li>The selected difficulty levels.</li>
+                                <li>Information about application errors in order to fix them.</li>
+                            </ul>
+                            <p>This data is aggregated and cannot be linked to an individual user. The sole purpose of this collection is to improve the quality of our service.</p>
+                            <h3>4. Third-Party APIs (Google Gemini)</h3>
+                            <p>The queries you make to generate content or chat with the AI tutor are sent to Google's Gemini API. Google's handling of this data is subject to its own privacy policies. We recommend reviewing them to understand how they process information.</p>
+                            <h3>5. Changes to the Policy</h3>
+                            <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
+                        </div>
+                    )
+                }
+            };
+
+            const renderFlow = () => {
+                switch (currentFlow) {
+                    case 'problems': return <ProblemSolverFlow key="problems" onBackToHome={() => handleNavigate(null, '/')} />;
+                    case 'content': return <ContentFlow key="content" onBackToHome={() => handleNavigate(null, '/')} />;
+                    case 'landing':
+                    default: return <LandingScreen key="landing" onSelectFlow={handleSelectFlow} />;
+                }
+            };
+
+            const renderContentForPath = () => {
+                if (path === '/terms') {
+                    return <LegalPage title={t('termsOfUse')} onNavigate={handleNavigate}>{legalContent[lang].terms}</LegalPage>;
+                }
+                if (path === '/privacy') {
+                    return <LegalPage title={t('privacyPolicy')} onNavigate={handleNavigate}>{legalContent[lang].privacy}</LegalPage>;
+                }
+                // Default to the main app flow
+                return <AnimatePresence mode="wait">{renderFlow()}</AnimatePresence>;
+            };
+
+            return (
+                <div className="flex flex-col min-h-screen">
+                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm sticky top-0 z-10 flex justify-between items-center">
+                        <div className="w-1/3">
+                            {currentFlow !== 'landing' && path === '/' && (
+                                <button onClick={(e) => handleNavigate(e, '/')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">&larr; {t('backToHome')}</button>
+                            )}
+                        </div>
+                        <h1 className="w-1/3 text-xl font-bold text-center text-gray-800 dark:text-gray-100">PhysicLabAI</h1>
+                        <div className="w-1/3 flex justify-end items-center gap-4">
+                            <LanguageSwitcher />
+                            <ThemeSwitcher />
+                        </div>
+                    </header>
+                    <main className="flex-1 overflow-y-auto">
+                        {renderContentForPath()}
+                    </main>
+                    <Footer onNavigate={handleNavigate} />
+                </div>
+            );
+        };
+
+        const container = document.getElementById('app-root');
+        const root = ReactDOM.createRoot(container);
+        root.render(
+            <LanguageProvider>
+                <App />
+            </LanguageProvider>
+        );
+    </script>
+</body>
+</html>
