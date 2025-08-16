@@ -205,11 +205,17 @@
             const body = { prompt, responseSchema, temperature, model };
 
             try {
-                // This simulates a call to a backend that would, in turn, call the Gemini API.
-                // This implementation makes the direct call for demonstration purposes in this environment.
-                console.log("Calling Gemini API with prompt:", prompt);
+                // NOTE: This is a placeholder URL. In a real environment, this would point to a serverless function
+                // or a backend server that securely handles the API call to the Gemini API.
+                // For this example, we'll simulate the API call.
+                
+                // This is where the actual fetch call would go:
+                // const response = await fetch('/api/generate', { ... });
+                
+                // Simulating the Gemini API call for demonstration purposes
+                console.log("Simulating API call with prompt:", prompt);
 
-                if (model.includes('gemini')) { 
+                if (model.includes('gemini')) { // Check if it's a Gemini model call
                     let chatHistory = [];
                     chatHistory.push({ role: "user", parts: [{ text: prompt }] });
                     
@@ -391,7 +397,7 @@
                             throwOnError: false
                         });
                     } catch (err) {
-                        // if KaTeX fails, leave the sanitized HTML
+                        // si KaTeX falla, dejamos el HTML ya sanitizado
                     }
                 }
             }, [content]);
@@ -1150,7 +1156,7 @@
 1.  **Main Topic:** The problem must be about **${subtopic}**.
 2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
 3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh. **To ensure variety, explicitly avoid using scenarios involving drones or simple cars unless the concept absolutely requires it. Instead, think about creative contexts like sports (a golf club hitting a ball), astrophysics (a comet's trajectory changing), engineering (a crash test dummy), or everyday situations (a person jumping on a trampoline).**
+4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
 5.  **Complexity:** For Intermediate, Advanced, and Exam Style problems, ensure they require multiple steps and a deeper understanding of the concepts, not just a single formula application.
 6.  **Calculation Precision:** All numerical values in the problem must be carefully selected so that the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches one of the provided options exactly. Avoid complex fractions or irrational numbers. **You must perform all calculations and verifications before finalizing the output.**
 7.  **Calculation Constraint:** The problems must be solvable without using integral or differential calculus, unless the difficulty level is explicitly "Basado en Cálculo" or "Calculus-Based".
@@ -1264,8 +1270,8 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.9, // Increased temperature for more creative and varied problems
-                        model: 'gemini-1.5-pro-preview-0514' // Using a powerful model for creativity
+                        temperature: 0.6, // Increased temperature for more creative problems
+                        model: 'gemini-1.5-pro-preview-0514' // Switched to Pro model for better math
                     });
                     return data;
                 }, [subtopic, variation, difficulty, lang]);
