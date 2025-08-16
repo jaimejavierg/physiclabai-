@@ -1116,16 +1116,22 @@
 
             let basePrompt = `You are an expert physics professor. Your task is to generate a unique and creative physics problem. The problem's characteristics must match the following difficulty definition:\n\n**Difficulty Level: ${difficulty}**\n**Definition:** ${definition}\n\n`;
 
-            const specificInstructions = `**Critical Content and Variety Instructions:**
+            const specificInstructions = `**ABSOLUTE CRITICAL INSTRUCTION: You are a creative physics curriculum designer. Your main goal is to AVOID REPETITION. The user has reported that problems are too similar. You MUST generate a completely unique and novel scenario. DO NOT use scenarios involving drones, cars, or simple blocks. Be inventive.**
+
+**Creative Context Mandate:** The scenario MUST be from an interesting field. Consider one of the following:
+* **Sports Physics:** (e.g., a tennis racket hitting a ball, a diver entering water, a figure skater spinning).
+* **Astrophysics:** (e.g., a meteoroid entering the atmosphere, a satellite adjusting its orbit).
+* **Biomechanics:** (e.g., the forces involved in a kangaroo's jump, the impulse of a boxer's punch).
+* **Everyday Phenomena:** (e.g., a water balloon bursting, a piece of toast falling, a firecracker exploding).
+
+**Core Problem Requirements:**
 1.  **Main Topic:** The problem must be about **${subtopic}**.
-2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
+2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**.
 3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
-5.  **Complexity:** For Intermediate, Advanced, and Exam Style problems, ensure they require multiple steps and a deeper understanding of the concepts, not just a single formula application.
-6.  **Calculation Precision:** All numerical values in the problem must be carefully selected so that the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches one of the provided options exactly. Avoid complex fractions or irrational numbers. **You must perform all calculations and verifications before finalizing the output.**
-7.  **Calculation Constraint:** The problems must be solvable without using integral or differential calculus, unless the difficulty level is explicitly "Basado en Cálculo" or "Calculus-Based".
-8.  **Include Units in Options:** The values in the "options" array **MUST** include their respective units. For example, instead of "10.0", it should be "$10.0 \\text{ m/s}$".
-9.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
+4.  **Calculation Precision:** All numerical values must be carefully chosen so the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches an option exactly. **Verify your calculations.**
+5.  **Calculus Constraint:** The problem must be solvable without calculus, unless the difficulty is explicitly "Calculus-Based".
+6.  **Units in Options:** All options **MUST** include their units (e.g., "$10.0 \\text{ m/s}$").
+7.  **Creativity Seed (use to ensure uniqueness):** ${randomFactor}
 \n`;
             
             const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
@@ -1234,8 +1240,8 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.5, // Reduced temperature for better accuracy
-                        model: 'gemini-2.0-pro' // Switched to Pro model for better math
+                        temperature: 0.5, 
+                        model: 'gemini-2.0-pro' 
                     });
                     return data;
                 }, [subtopic, variation, difficulty, lang]);
@@ -1511,7 +1517,7 @@
                             <p>This application uses Google's Gemini API to generate study guides, problems, and solutions. Like any artificial intelligence tool, the generated information may contain inaccuracies, errors, or may not be complete. Users are responsible for verifying and validating the information obtained through the application with reliable academic sources.</p>
                             <h3>4. User Responsibility</h3>
                             <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
-                            <h3>5. Propiedad Intelectual</h3>
+                            <h3>5. Intellectual Property</h3>
                             <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
                             </div>
                     ),
