@@ -394,7 +394,7 @@
                     category: 'Fluidos y Termodinámica',
                     topics: [
                         { name: 'Fluidos', subtopics: ['Presión y Densidad', 'Presión Hidrostática', 'Principio de Arquímedes', 'Tensión Superficial', 'Capilaridad', 'Ecuación de Bernoulli', 'Efecto Venturi'] },
-                        { name: 'Temperatura y Calor', subtopics: ['Escalas de Temperatura', 'Dilataçión Térmica', 'Calorimetría', 'Cambios de Fase', 'Equilibrio Térmico'] },
+                        { name: 'Temperatura y Calor', subtopics: ['Escalas de Temperatura', 'Dilatación Térmica', 'Calorimetría', 'Cambios de Fase', 'Equilibrio Térmico'] },
                         { name: 'Termodinámica', subtopics: ['Primera Ley de la Termodinámica', 'Segunda Ley de la Termodinámica', 'Entropía', 'Máquinas Térmicas', 'Eficiencia Térmica', 'Ciclo de Carnot'] }
                     ]
                 },
@@ -1114,34 +1114,34 @@
             const definition = difficultyDefinitions[lang][difficulty] || '';
             const correctText = lang === 'es' ? 'correcta' : 'correct';
 
-            let basePrompt = `You are an expert physics professor. Your task is to generate a unique and creative physics problem. The problem's characteristics must match the following difficulty definition:\n\n**Difficulty Level: ${difficulty}**\n**Definition:** ${definition}\n\n`;
+            const basePrompt = `**ROLE:** You are a meticulous physics examiner. Your primary goal is **ACCURACY** and **CLARITY**. You will create a physics problem based on a strict internal thought process.
 
-            const specificInstructions = `**ABSOLUTE CRITICAL INSTRUCTION: You are a creative physics curriculum designer. Your main goal is to AVOID REPETITION. The user has reported that problems are too similar. You MUST generate a completely unique and novel scenario. DO NOT use scenarios involving drones, cars, or simple blocks. Be inventive.**
+**INTERNAL THOUGHT PROCESS (Mandatory):** Before generating the JSON, you MUST follow these steps internally:
+1.  **Define Variables:** Choose realistic physical quantities for the problem (e.g., mass, initial velocity, final velocity, time).
+2.  **Write Formula:** Identify the core physics formula that connects these variables (e.g., $J = \Delta p = m \cdot v_f - m \cdot v_i$).
+3.  **Calculate Correct Answer:** Use the variables to calculate the correct answer. Ensure the result is a simple, clean number. **DOUBLE-CHECK YOUR MATH.**
+4.  **Formulate Problem:** Write a clear, concise problem statement using a real-world scenario that incorporates the variables you defined.
+5.  **Write Step-by-Step Solution:** Write a clear, logical, step-by-step solution that a student can easily follow to understand the process. Each step must be a separate string in the "solution" array.
+6.  **Create Distractors:** Generate three plausible but incorrect answer options. They should be common mistakes (e.g., sign errors, unit conversion errors).
+7.  **Assemble JSON:** Build the final JSON object with the problem statement, the options (with the correct one at index 0), the correct index, and the solution steps.
 
-**Creative Context Mandate:** The scenario MUST be from an interesting field. Consider one of the following:
-* **Sports Physics:** (e.g., a tennis racket hitting a ball, a diver entering water, a figure skater spinning).
-* **Astrophysics:** (e.g., a meteoroid entering the atmosphere, a satellite adjusting its orbit).
-* **Biomechanics:** (e.g., the forces involved in a kangaroo's jump, the impulse of a boxer's punch).
-* **Everyday Phenomena:** (e.g., a water balloon bursting, a piece of toast falling, a firecracker exploding).
+**CRITICAL INSTRUCTIONS FOR OUTPUT:**
+* **ACCURACY FIRST:** All physics and calculations in the problem and solution MUST be 100% correct. The solution steps must logically lead to the correct answer.
+* **PROBLEM STRUCTURE VARIETY:** Your most important task is to vary the structure of the problem. Do not just change the objects; change WHAT is being asked and HOW. For example, for the concept of **${variation}**:
+    * One time, provide force and time, and ask for the change in velocity.
+    * Another time, provide mass and change in velocity, and ask for the average force.
+    * Another time, ask for a conceptual comparison between two different scenarios.
+* **SCENARIO VARIETY:** Use a clear, real-world scenario. **DO NOT USE drones, cars, or gymnasts.** Use diverse contexts like sports (a soccer ball being kicked), technology (a smartphone falling), or nature (a raindrop falling).
+* **LANGUAGE:** The entire output must be in ${lang === 'es' ? 'Spanish' : 'English'}.
 
-**Core Problem Requirements:**
-1.  **Main Topic:** The problem must be about **${subtopic}**.
-2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**.
-3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Calculation Precision:** All numerical values must be carefully chosen so the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches an option exactly. **Verify your calculations.**
-5.  **Calculus Constraint:** The problem must be solvable without calculus, unless the difficulty is explicitly "Calculus-Based".
-6.  **Units in Options:** All options **MUST** include their units (e.g., "$10.0 \\text{ m/s}$").
-7.  **Creativity Seed (use to ensure uniqueness):** ${randomFactor}
-\n`;
-            
-            const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
-1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
-2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
-3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
-4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors. The model must not generate any text trying to justify the other options as correct under different assumptions. The prompt must be written so that there is only one ${correctText} answer based on the provided information.
-5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
+**JSON FORMATTING RULES (ZERO TOLERANCE):**
+1.  **Strict JSON:** The output MUST be a valid JSON object and nothing else.
+2.  **LaTeX:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\`).
+3.  **Correct Answer First:** The correct answer MUST be the first element in the 'options' array, and 'correctAnswerIndex' MUST be 0.
+4.  **Units:** All numerical options MUST include their units within the LaTeX delimiters (e.g., "$12.5 \\text{ Ns}$").
+`;
 
-            return `${basePrompt}${specificInstructions}${rules}`;
+            return basePrompt;
         };
 
         // The main flow for generating and solving problems
@@ -1240,7 +1240,7 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.9, 
+                        temperature: 0.5, 
                         model: 'gemini-2.0-pro' 
                     });
                     return data;
