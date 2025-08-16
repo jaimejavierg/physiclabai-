@@ -202,59 +202,28 @@
         
         // --- Backend API helper function as requested ---
         async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.5-flash-preview-05-20' }) {
-          const payload = {
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          };
-          
-          if (responseSchema) {
-            payload.generationConfig = {
-              responseMimeType: "application/json",
-              responseSchema: responseSchema,
-            };
-          }
-          
-          const apiKey = "";
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const body = { prompt, responseSchema, temperature, model };
 
-          let response;
-          let attempts = 0;
-          const maxAttempts = 5;
-          const baseDelay = 1000;
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const json = await response.json();
 
-          while (attempts < maxAttempts) {
-              try {
-                  response = await fetch(apiUrl, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(payload)
-                  });
+                if (!response.ok || !json.ok) {
+                    const errorMsg = json?.error || json?.detail || 'An unknown error occurred.';
+                    throw new Error(errorMsg);
+                }
 
-                  if (response.status !== 429) { // 429 is Too Many Requests
-                      const result = await response.json();
-                      const contentPart = result?.candidates?.[0]?.content?.parts?.[0];
-                      if (!contentPart) {
-                          throw new Error('Invalid response structure from model.');
-                      }
+                return json.data;
 
-                      if (responseSchema) {
-                          const jsonText = contentPart.text;
-                          return JSON.parse(jsonText);
-                      } else {
-                          return contentPart.text;
-                      }
-                  } else {
-                      attempts++;
-                      if (attempts < maxAttempts) {
-                          const delay = baseDelay * Math.pow(2, attempts - 1) + Math.random() * 500;
-                          await new Promise(resolve => setTimeout(resolve, delay));
-                      } else {
-                          throw new Error('API request failed after multiple retries due to rate limiting.');
-                      }
-                  }
-              } catch (e) {
-                  throw e;
-              }
-          }
+            } catch (e) {
+                console.error("Backend call error:", e);
+                throw new Error(e.message || 'Error communicating with the backend.');
+            }
         }
 
         // --- Internationalization (i18n) ---
@@ -478,15 +447,15 @@
                     topics: [
                         { name: 'Electrostática', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
                         { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
-                        { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitance', 'Capacitors', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
+                        { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitancia', 'Capacitores', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
                         { name: 'Magnetismo', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Aplicaciones: Motores y Generadores'] }
                     ]
                 },
                 {
-                    category: 'Waves & Optics',
+                    category: 'Ondas y Óptica',
                     topics: [
-                        { name: 'Ondas', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
-                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Snell\'s Law)', 'Plane Mirrors', 'Concave Mirrors', 'Convex Mirrors', 'Biconvex Lenses', 'Biconcave Lenses', 'Optical Instruments'] }
+                        { name: 'Ondas', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interferencia', 'Ondas Estacionarias', 'Resonancia'] },
+                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Optical Instruments'] }
                     ]
                 }
             ]
@@ -646,7 +615,7 @@
                 'Hydrostatic Pressure': ['Analysis of pressure in fluids at rest'],
                 "Archimedes' Principle": ['Analysis of buoyancy and buoyant force'],
                 'Surface Tension': ['Surface tension phenomena'],
-                'Capillarity': ['Conceptual analysis of capillarity'],
+                'Capilaridad': ['Conceptual analysis of capillarity'],
                 "Bernoulli's Equation": ["Application of Bernoulli's principle"],
                 'Venturi Effect': ['Analysis of the pressure-velocity relationship'],
                 'Temperature Scales': ['Conversion between thermometric scales'],
@@ -659,7 +628,7 @@
                 'Entropy': ['Conceptual analysis of entropy change'],
                 'Heat Engines': ['Analysis of a heat engine cycle'],
                 'Thermal Efficiency': ['Calculation of thermal efficiency'],
-                'Carnot Cycle': ['Analysis of the Carnot cycle and efficiency'],
+                'Carnot Cycle': ['Análisis del ciclo y eficiencia de Carnot'],
                 "Coulomb's Law": ['Force between point charges', 'Net force in a system of charges'],
                 'Electric Field': ['Field of a point charge', 'Force on a charge in an E field'],
                 'Electric Field of Point Charges': ['Superposition of electric fields'],
@@ -680,20 +649,20 @@
                 'RC Circuits': ['Analysis of the charging process', 'Analysis of the discharging process'],
                 'Time Constant': ['Meaning of the RC time constant'],
                 'Magnetic Force on Charges': ['Analysis of the Lorentz force'],
-                'Fuerza Magnética sobre Corrientes': ['Fuerza sobre un conductor en un campo B'],
-                'Campo Magnético de Conductores': ['Aplicación de la Ley de Ampere (conceptual)'],
-                'Campo Magnético de una Espira': ['Análisis del campo en el centro de una espira'],
-                'Campo Magnético de un Solenoide': ['Análisis del campo en un solenoide ideal'],
-                'Ley de Faraday': ['Análisis de la FEM inducida'],
-                'Ley de Lenz': ['Determinación del sentido de la corriente inducida'],
-                'Inducción Electromagnética': ['Aplicaciones conceptuales de la inducción'],
-                'Aplicaciones: Motores y Generadores': ['Principios de funcionamiento'],
+                'Magnetic Force on Currents': ['Force on a conductor in a B field'],
+                'Magnetic Field of Conductors': ["Application of Ampere's Law (conceptual)"],
+                'Magnetic Field of a Loop': ['Analysis of the field at the center of a loop'],
+                'Magnetic Field of a Solenoid': ['Analysis of the field in an ideal solenoid'],
+                "Faraday's Law": ['Analysis of induced EMF'],
+                "Lenz's Law": ['Determining the direction of induced current'],
+                'Electromagnetic Induction': ['Conceptual applications of induction'],
+                'Aplicaciones: Motores y Generadores': ['Operating principles'],
                 'Propiedades de las Ondas': ['Relación entre velocidad, frecuencia y longitud de onda'],
                 'Periodo, Frecuencia y Longitud de Onda': ['Cálculos y conversiones'],
                 'Efecto Doppler': ['Análisis de la frecuencia aparente'],
                 'Interferencia': ['Análisis de interferencia constructiva y destructiva'],
                 'Ondas Estacionarias': ['Análisis de nodos y antinodos'],
-                'Resonancia': ['Fenómenos de resonancia en sistemas'],
+                'Resonancia': ['Resonancia phenomena in systems'],
                 'Reflexión': ['Aplicación de la ley de reflexión'],
                 'Refracción (Ley de Snell)': ['Análisis de la refracción de la luz'],
                 'Espejos Planos': ['Formación de imágenes en espejos planos'],
@@ -701,7 +670,7 @@
                 'Espejos Convexos': ['Formación de imágenes', 'Aplicación de la ecuación de espejos'],
                 'Lentes Biconvexas': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de lentes'],
                 'Lentes Bicóncavas': ['Formación de imágenes', 'Aplicación de la ecuación de lentes'],
-                'Instrumentos Ópticos': ['Análisis conceptual de instrumentos']
+                'Optical Instruments': ['Conceptual analysis of instruments']
             }
         };
 
@@ -1003,7 +972,6 @@
 3.  **Additional Rule:** The guide must be purely algebraic and conceptual. **IT MUST NOT USE DIFFERENTIAL OR INTEGRAL CALCULUS.**
 4.  **Tone:** Absolutely formal and academic.`;
 
-                // Reemplazando la llamada a la API por la llamada al backend
                 try {
                     const data = await callBackend({
                         prompt,
@@ -1014,7 +982,7 @@
                     setContent(data);
                 } catch (e) {
                     console.error("Content API Error:", e);
-                    setError("Could not generate content. Please try again later.");
+                    setError("Ocurrió un error al generar el contenido. Por favor, inténtalo de nuevo.");
                 } finally {
                     setIsLoading(false);
                 }
@@ -1104,7 +1072,6 @@
                     ? `You are an expert physics tutor. A student is solving this problem: "${context.text}". Their question is: "${userInput}". Guide them to understand the concept without giving the answer directly. Use LaTeX for all formulas. Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`
                     : `You are an expert physics tutor. A student is reading a guide about '${context.topicName}'. Their question is: '${userInput}'. Answer concisely and directly, helping them understand the concept related to their question. Use LaTeX for all formulas. Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`;
 
-                // Reemplazando la llamada a la API por la llamada al backend
                 try {
                     const text = await callBackend({
                         prompt,
@@ -1266,8 +1233,8 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.5, 
-                        model: 'gemini-2.0-pro'
+                        temperature: 0.5, // Reduced temperature for better accuracy
+                        model: 'gemini-2.0-pro' // Switched to Pro model for better math
                     });
                     return data;
                 }, [subtopic, variation, difficulty, lang]);
@@ -1294,7 +1261,7 @@
                         
                         setProblem({ ...problemFromApi, options: options, correctAnswerIndex: newCorrectIndex });
                     } catch (e) {
-                        setError(e.message);
+                        setError("Ocurrió un error al generar el problema. Por favor, inténtalo de nuevo.");
                     } finally {
                         setIsLoading(false);
                     }
@@ -1623,6 +1590,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
