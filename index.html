@@ -205,56 +205,20 @@
             const body = { prompt, responseSchema, temperature, model };
 
             try {
-                // NOTE: This is a placeholder URL. In a real environment, this would point to a serverless function
-                // or a backend server that securely handles the API call to the Gemini API.
-                // For this example, we'll simulate the API call.
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
                 
-                // This is where the actual fetch call would go:
-                // const response = await fetch('/api/generate', { ... });
-                
-                // Simulating the Gemini API call for demonstration purposes
-                console.log("Simulating API call with prompt:", prompt);
+                const json = await response.json();
 
-                if (model.includes('gemini')) { // Check if it's a Gemini model call
-                    let chatHistory = [];
-                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                    
-                    const payload = { contents: chatHistory, generationConfig: { temperature } };
-                    if (responseSchema) {
-                        payload.generationConfig.responseMimeType = "application/json";
-                        payload.generationConfig.responseSchema = responseSchema;
-                    }
-
-                    const apiKey = ""; // Canvas will provide this
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-                    
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
-                    }
-                    
-                    const result = await response.json();
-                    
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        const text = result.candidates[0].content.parts[0].text;
-                        if (responseSchema) {
-                            return JSON.parse(text);
-                        }
-                        return text;
-                    } else {
-                       throw new Error('Invalid response structure from Gemini API');
-                    }
+                if (!response.ok || !json.ok) {
+                    const errorMsg = json?.error || json?.detail || 'An unknown error occurred.';
+                    throw new Error(errorMsg);
                 }
-                
-                throw new Error(`Unsupported model: ${model}`);
+
+                return json.data;
 
             } catch (e) {
                 console.error("Backend call error:", e);
@@ -397,7 +361,7 @@
                             throwOnError: false
                         });
                     } catch (err) {
-                        // si KaTeX falla, dejamos el HTML ya sanitizado
+                        // if KaTeX fails, leave the sanitized HTML
                     }
                 }
             }, [content]);
@@ -1270,8 +1234,8 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.6, // Increased temperature for more creative problems
-                        model: 'gemini-1.5-pro-preview-0514' // Switched to Pro model for better math
+                        temperature: 0.5, // Reduced temperature for better accuracy
+                        model: 'gemini-2.0-pro' // Switched to Pro model for better math
                     });
                     return data;
                 }, [subtopic, variation, difficulty, lang]);
@@ -1298,7 +1262,7 @@
                         
                         setProblem({ ...problemFromApi, options: options, correctAnswerIndex: newCorrectIndex });
                     } catch (e) {
-                        setError("An error occurred while generating the problem. Please try again.");
+                        setError("Ocurrió un error al generar el problema. Por favor, inténtalo de nuevo.");
                     } finally {
                         setIsLoading(false);
                     }
@@ -1547,7 +1511,7 @@
                             <p>This application uses Google's Gemini API to generate study guides, problems, and solutions. Like any artificial intelligence tool, the generated information may contain inaccuracies, errors, or may not be complete. Users are responsible for verifying and validating the information obtained through the application with reliable academic sources.</p>
                             <h3>4. User Responsibility</h3>
                             <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
-                            <h3>5. Intellectual Property</h3>
+                            <h3>5. Propiedad Intelectual</h3>
                             <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
                             </div>
                     ),
