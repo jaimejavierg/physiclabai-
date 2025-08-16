@@ -13,13 +13,16 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
+    <!-- DOMPurify for HTML Sanitization -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
     <!-- React and Babel for JSX -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Framer Motion for Animations -->
-    <script src="https://unpkg.com/framer-motion@latest/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/framer-motion@latest/dist/framer-motion.umd.js"></script>
 
     <!-- Chart.js for Graphing -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -125,27 +128,27 @@
             padding-left: 1.5rem;
             margin-bottom: 1rem;
         }
-         /* Added prose styles for legal pages */
+          /* Added prose styles for legal pages */
         .prose {
             max-width: 80ch; /* equivalent to max-w-3xl for readability */
         }
         .dark .prose {
-             --tw-prose-body: #d1d5db;
-             --tw-prose-headings: #f3f4f6;
-             --tw-prose-lead: #9ca3af;
-             --tw-prose-links: #f9fafb;
-             --tw-prose-bold: #f9fafb;
-             --tw-prose-counters: #9ca3af;
-             --tw-prose-bullets: #4b5563;
-             --tw-prose-hr: #374151;
-             --tw-prose-quotes: #e5e7eb;
-             --tw-prose-quote-borders: #374151;
-             --tw-prose-captions: #9ca3af;
-             --tw-prose-code: #f9fafb;
-             --tw-prose-pre-code: #d1d5db;
-             --tw-prose-pre-bg: #1f2937;
-             --tw-prose-th-borders: #374151;
-             --tw-prose-td-borders: #374151;
+            --tw-prose-body: #d1d5db;
+            --tw-prose-headings: #f3f4f6;
+            --tw-prose-lead: #9ca3af;
+            --tw-prose-links: #f9fafb;
+            --tw-prose-bold: #f9fafb;
+            --tw-prose-counters: #9ca3af;
+            --tw-prose-bullets: #4b5563;
+            --tw-prose-hr: #374151;
+            --tw-prose-quotes: #e5e7eb;
+            --tw-prose-quote-borders: #374151;
+            --tw-prose-captions: #9ca3af;
+            --tw-prose-code: #f9fafb;
+            --tw-prose-pre-code: #d1d5db;
+            --tw-prose-pre-bg: #1f2937;
+            --tw-prose-th-borders: #374151;
+            --tw-prose-td-borders: #374151;
         }
         .prose h1 {
             font-size: 2em;
@@ -179,27 +182,43 @@
     <div id="app-root"></div>
 
     <script type="text/babel">
+        // Import necessary React hooks and components from the global scope
         const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
         
-        const { motion, AnimatePresence } = window.Framer || { 
-            motion: new Proxy({}, { 
-                get: (target, prop) => {
-                    const FallbackComponent = ({ children, ...props }) => {
-                        const motionProps = ['whileHover', 'whileTap', 'initial', 'animate', 'exit', 'transition', 'layout', 'layoutId'];
-                        const filteredProps = { ...props };
-                        motionProps.forEach(p => delete filteredProps[p]);
-                        return React.createElement(prop, filteredProps, children);
-                    };
-                    return FallbackComponent;
-                }
-            }),
-            AnimatePresence: ({ children }) => <>{children}</> 
-        };
+        // Use Framer Motion global variable from UMD build, with fallback
+        const { motion, AnimatePresence } = (window.FramerMotion || {
+          motion: new Proxy({}, {
+            get: (target, prop) => {
+              const FallbackComponent = ({ children, ...props }) => {
+                const motionProps = ['whileHover', 'whileTap', 'initial', 'animate', 'exit', 'transition', 'layout', 'layoutId'];
+                const filtered = { ...props }; motionProps.forEach(p => delete filtered[p]);
+                return React.createElement(prop, filtered, children);
+              };
+              return FallbackComponent;
+            }
+          }),
+          AnimatePresence: ({ children }) => <>{children}</>
+        });
+        
+        // --- Backend API helper function as requested ---
+        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.0-flash' }) {
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, responseSchema, temperature, model })
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json?.error || json?.detail || 'Backend error');
+          if (!json.ok) throw new Error(json?.error || 'Invalid response from model');
+          return json.data; // si schema: JSON; si no: texto
+        }
 
         // --- Internationalization (i18n) ---
+        // Context for providing and consuming language data throughout the app
         const LanguageContext = createContext();
         const useLanguage = () => useContext(LanguageContext);
 
+        // Dictionary of translations
         const translations = {
             es: {
                 welcomeTitle: 'Bienvenido a PhysicLabAI',
@@ -296,34 +315,40 @@
             );
         };
         
-        // --- Component to render Markdown and LaTeX ---
+        // --- Component to render Markdown and LaTeX (sanitized) ---
         const ContentRenderer = ({ content }) => {
             const containerRef = useRef(null);
             useEffect(() => {
                 const element = containerRef.current;
-                if (element && content) {
-                    let htmlContent = content
-                        .replace(/\*\*(Planteamiento:|Approach:)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*\*(Sustitución:|Substitution:)\*\*/g, '<br /><br /><strong>$1</strong>')
-                        .replace(/\*\*(Resultado:|Result:)\*\*/g, '<br /><br /><strong>$1</strong>')
-                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                        .replace(/\\n/g, '<br />');
+                if (!element || content == null) return;
 
-                    element.innerHTML = htmlContent;
+                // Simple Markdown-like replacements for bold/italic and line breaks
+                let htmlContent = String(content)
+                    .replace(/\*\*(Planteamiento:|Approach:)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*\*(Sustitución:|Substitution:)\*\*/g, '<br /><br /><strong>$1</strong>')
+                    .replace(/\*\*(Resultado:|Result:)\*\*/g, '<br /><br /><strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\\n/g, '<br />');
 
-                    if (window.renderMathInElement) {
-                        try {
-                            window.renderMathInElement(element, {
-                                delimiters: [
-                                    {left: '$$', right: '$$', display: true},
-                                    {left: '$', right: '$', display: false}
-                                ],
-                                throwOnError: false
-                            });
-                        } catch (error) {
-                            console.error("KaTeX error:", error);
-                            element.innerHTML = htmlContent; // Fallback to raw HTML
-                        }
+                // SANITIZE
+                const safe = (window.DOMPurify && window.DOMPurify.sanitize)
+                    ? window.DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } })
+                    : htmlContent;
+
+                element.innerHTML = safe;
+
+                // Render LaTeX with KaTeX
+                if (window.renderMathInElement) {
+                    try {
+                        window.renderMathInElement(element, {
+                            delimiters: [
+                                { left: '$$', right: '$$', display: true },
+                                { left: '$', 	right: '$', 	display: false }
+                            ],
+                            throwOnError: false
+                        });
+                    } catch (err) {
+                        // si KaTeX falla, dejamos el HTML ya sanitizado
                     }
                 }
             }, [content]);
@@ -331,6 +356,7 @@
         };
 
         // --- Application data STRUCTURED BY CATEGORY ---
+        // This is a comprehensive, hard-coded data structure for topics and subtopics
         const topicCategories = {
             es: [
                 {
@@ -541,9 +567,9 @@
                 'Vector Product': ['Application of the vector product', 'Magnitude and direction of the resultant vector'],
                 'Uniform Rectilinear Motion': ['Relationship between distance, velocity, and time'],
                 'Uniformly Accelerated Rectilinear Motion': ['Final velocity analysis', 'Displacement analysis', 'Problems without the time variable'],
-                'Free Fall': ['Analysis of height and fall time', 'Impact velocity'],
-                'Projectile Motion': ['Analysis of horizontal range', 'Analysis of maximum height', 'Projectile flight time'],
-                'Uniform Circular Motion': ['Analysis of tangential velocity', 'Analysis of centripetal acceleration'],
+                'Free Fall': ['Height and fall time analysis', 'Impact velocity'],
+                'Projectile Motion': ['Horizontal range analysis', 'Maximum height analysis', 'Flight time'],
+                'Uniform Circular Motion': ['Tangential velocity', 'Centripetal acceleration'],
                 'Uniformly Accelerated Circular Motion': ['Rotational kinematics relationships'],
                 "Newton's First Law": ['Systems in static equilibrium', 'Systems in motion at constant velocity'],
                 "Newton's Second Law": ['Application of F=ma', 'Force and acceleration problems', 'Inertial mass analysis'],
@@ -625,7 +651,7 @@
                 'Standing Waves': ['Analysis of nodes and antinodes'],
                 'Resonance': ['Resonance phenomena in systems'],
                 'Reflection': ['Application of the law of reflection'],
-                'Refraction (Snell\'s Law)': ['Analysis of light refraction'],
+                'Refraction (Snell\'s Law)': ['Angle relations with indices', 'Critical angle & total internal reflection'],
                 'Plane Mirrors': ['Image formation in plane mirrors'],
                 'Concave Mirrors': ['Image formation (cases)', 'Application of the mirror equation'],
                 'Convex Mirrors': ['Image formation', 'Application of the mirror equation'],
@@ -635,12 +661,13 @@
             }
         };
         
+        // Define difficulty levels for problems
         const difficultyLevels = {
             es: ['Análisis Conceptual', 'Fundamental', 'Intermedio', 'Avanzado', 'Estilo Examen (AP)', 'Basado en Cálculo'],
             en: ['Conceptual Analysis', 'Fundamental', 'Intermediate', 'Advanced', 'Exam Style (AP)', 'Calculus-Based']
         };
 
-        // --- NEW Difficulty Definitions ---
+        // Definitions for each difficulty level to provide context to the AI
         const difficultyDefinitions = {
             es: {
                 'Análisis Conceptual': 'Problemas cualitativos sin cálculos. Evalúan comprensión teórica y razonamiento lógico sobre conceptos físicos. Suelen ser de opción múltiple o verdadero/falso.',
@@ -662,6 +689,7 @@
 
         // --- UI Components ---
         
+        // Button to switch between English and Spanish
         const LanguageSwitcher = () => {
             const { lang, setLang } = useLanguage();
             const toggleLanguage = () => {
@@ -678,6 +706,7 @@
             );
         };
 
+        // Button to switch between light and dark mode
         const ThemeSwitcher = () => {
             const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
             useEffect(() => {
@@ -697,12 +726,14 @@
             );
         };
 
+        // Wrapper component with Framer Motion for screen transitions
         const ScreenWrapper = ({ children }) => (
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="p-4 md:p-6">
                 {children}
             </motion.div>
         );
         
+        // The initial landing screen of the application
         const LandingScreen = ({ onSelectFlow }) => {
             const { t } = useLanguage();
             return (
@@ -733,6 +764,7 @@
             </ScreenWrapper>
         )};
 
+        // Screen to select a physics category
         const CategoryScreen = ({ onCategorySelect, onBack }) => {
             const { lang, t } = useLanguage();
             return (
@@ -749,6 +781,7 @@
             </ScreenWrapper>
         )};
 
+        // Screen to select a topic within a category
         const TopicsScreen = ({ category, onTopicSelect, onBack }) => {
             const { t } = useLanguage();
             return (
@@ -765,6 +798,7 @@
             </ScreenWrapper>
         )};
 
+        // Screen to select a subtopic within a topic
         const SubtopicsScreen = ({ topic, onSubtopicSelect, onBack }) => {
             const { t } = useLanguage();
             return (
@@ -781,6 +815,7 @@
             </ScreenWrapper>
         )};
         
+        // Component for rendering Chart.js graphs
         const GraphRenderer = ({ data }) => {
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
@@ -858,6 +893,7 @@
             return <div className="relative h-64 md:h-80 my-6"><canvas ref={chartRef}></canvas></div>;
         };
 
+        // Screen to display the generated study guide content
         const ContentDisplayScreen = ({ topicName, subtopic, onBack, onTutorRequest }) => {
             const [content, setContent] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
@@ -868,6 +904,7 @@
                 setIsLoading(true);
                 setError('');
                 
+                // Define the JSON schema for the study guide response
                 const guideSchema = {
                     type: "ARRAY",
                     items: {
@@ -904,38 +941,33 @@
                     }
                 };
 
+                // Construct the prompt for the Gemini API
                 const prompt = `**Task:** Generate a physics study guide in a structured JSON format.
 **Role:** You are a physics expert and textbook author. Your tone should be formal, clear, and encyclopedic.
 **Topic:** "${subtopic}" (within the general area of "${topicName}") for a high school student.
 **Language:** The entire output, including all content, must be in ${lang === 'es' ? 'Spanish' : 'English'}.
 
 **Formatting and Content Instructions (VERY STRICT):**
-1.  **Output Format:** The output MUST be a valid JSON object matching the provided schema. It must be an array of objects.
-2.  **Block Types and LaTeX Rules:**
+1.  **Output Format:** The output MUST be a valid JSON object matching the provided schema. It must be an array of objects.
+2.  **Block Types and LaTeX Rules:**
     * \`"type": "heading1"\`: For the main title (the sub-topic name).
     * \`"type": "heading2"\`: For subtitles like "Introduction", "Key Formula", "Example", "Summary".
     * \`"type": "paragraph"\`: For explanatory text. For any mathematical notation within a paragraph, you MUST use inline LaTeX delimiters (\`$...\$\`).
     * \`"type": "formula"\`: For mathematical equations. The "content" field must contain only the LaTeX code, without \`$\` delimiters.
     * \`"type": "example"\`: For solved examples. The "content" field must be formatted with \`**${lang === 'es' ? 'Planteamiento' : 'Approach'}:**\`, \`**${lang === 'es' ? 'Sustitución' : 'Substitution'}:**\`, and \`**${lang === 'es' ? 'Resultado' : 'Result'}:**\`. **CRITICAL LATEX RULE:** Within the example content, ALL mathematical notation (variables, numbers with units, equations) MUST be wrapped in inline LaTeX delimiters (\`$...\$\`). For example: \`$F = m \\times a$\`, \`$10 \\text{ kg}$\`, \`$\\mu_s = 0.3$\`.
     * \`"type": "graph"\`: **ONLY if the topic explicitly requires it** (e.g., kinematics graphs), include a block of this type. Provide realistic data.
-3.  **Additional Rule:** The guide must be purely algebraic and conceptual. **IT MUST NOT USE DIFFERENTIAL OR INTEGRAL CALCULUS.**
-4.  **Tone:** Absolutely formal and academic.`;
+3.  **Additional Rule:** The guide must be purely algebraic and conceptual. **IT MUST NOT USE DIFFERENTIAL OR INTEGRAL CALCULUS.**
+4.  **Tone:** Absolutely formal and academic.`;
 
+                // Reemplazando la llamada a la API por la llamada al backend
                 try {
-                    const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                    const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: guideSchema } };
-                    const apiKey = ""; // API key will be injected in the execution environment
-                    const modelName = 'gemini-2.5-flash-preview-05-20';
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
-                    const result = await response.json();
-                    if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0].text) {
-                        const parsedContent = JSON.parse(result.candidates[0].content.parts[0].text);
-                        setContent(parsedContent);
-                    } else {
-                        throw new Error("The AI did not generate a valid response.");
-                    }
+                    const data = await callBackend({
+                        prompt,
+                        responseSchema: guideSchema,
+                        temperature: 0.30,
+                        model: 'gemini-2.0-flash'
+                    });
+                    setContent(data);
                 } catch (e) {
                     console.error("Content API Error:", e);
                     setError("Could not generate content. Please try again later.");
@@ -944,6 +976,7 @@
                 }
             }, [topicName, subtopic, lang]);
 
+            // Fetch content when the component mounts or dependencies change
             useEffect(() => {
                 generateContent();
             }, [generateContent]);
@@ -992,6 +1025,7 @@
             );
         };
         
+        // Modal component for displaying pop-ups like the AI tutor
         const Modal = ({ title, children, onClose }) => (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="modal-overlay">
                 <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} className="modal-content">
@@ -1004,6 +1038,7 @@
             </motion.div>
         );
 
+        // The AI Tutor chat interface
         const AITutor = ({ context, onClose }) => {
             const [chat, setChat] = useState([]);
             const [isLoading, setIsLoading] = useState(false);
@@ -1020,21 +1055,19 @@
                 setIsLoading(true);
                 inputRef.current.value = '';
                 
+                // Craft the prompt for the AI tutor based on the current context (problem or content guide)
                 const prompt = context.type === 'problem' 
                     ? `You are an expert physics tutor. A student is solving this problem: "${context.text}". Their question is: "${userInput}". Guide them to understand the concept without giving the answer directly. Use LaTeX for all formulas. Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`
                     : `You are an expert physics tutor. A student is reading a guide about '${context.topicName}'. Their question is: '${userInput}'. Answer concisely and directly, helping them understand the concept related to their question. Use LaTeX for all formulas. Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`;
 
+                // Reemplazando la llamada a la API por la llamada al backend
                 try {
-                    const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                    const payload = { contents: chatHistory };
-                    const apiKey = ""; // API key will be injected in the execution environment
-                    const modelName = 'gemini-2.5-flash-preview-05-20';
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
-                    const result = await response.json();
-                    const aiResponse = result.candidates[0].content.parts[0].text;
-                    setChat(prev => [...prev, { role: 'ai', text: aiResponse }]);
+                    const text = await callBackend({
+                        prompt,
+                        temperature: 0.50,
+                        model: 'gemini-2.0-flash'
+                    });
+                    setChat(prev => [...prev, { role: 'ai', text }]);
                 } catch (e) {
                     setChat(prev => [...prev, { role: 'ai', text: t('aiTutorError') }]);
                 } finally {
@@ -1055,7 +1088,7 @@
                             <div ref={chatEndRef} />
                         </div>
                         <div className="flex gap-2">
-                            <input type="text" ref={inputRef} className="flex-grow bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('typeYourQuestion')} onKeyPress={(e) => e.key === 'Enter' && handleQuery(e.target.value)} disabled={isLoading} />
+                            <input type="text" ref={inputRef} className="flex-grow bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('typeYourQuestion')} onKeyDown={(e) => e.key === 'Enter' && handleQuery(e.target.value)} disabled={isLoading} />
                             <button onClick={() => handleQuery(inputRef.current.value)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400" disabled={isLoading}>{t('send')}</button>
                         </div>
                     </div>
@@ -1064,6 +1097,7 @@
         };
         
         // --- UPDATED Prompt Generation with Difficulty Definitions ---
+        // This function intelligently constructs the prompt for generating a physics problem
         const getProblemIntelligentPrompt = (subtopic, variation, difficulty, lang) => {
             const randomFactor = Math.random();
             const definition = difficultyDefinitions[lang][difficulty] || '';
@@ -1071,23 +1105,24 @@
             let basePrompt = `You are an expert physics professor. Your task is to generate a unique and creative physics problem. The problem's characteristics must match the following difficulty definition:\n\n**Difficulty Level: ${difficulty}**\n**Definition:** ${definition}\n\n`;
 
             const specificInstructions = `**Critical Content and Variety Instructions:**
-1.  **Main Topic:** The problem must be about **${subtopic}**.
-2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
-3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario.
-5.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
+1.  **Main Topic:** The problem must be about **${subtopic}**.
+2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
+3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
+4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario.
+5.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
 \n`;
             
             const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
-1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
-2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
-3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
-4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors.
-5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
+1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
+2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
+3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
+4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors.
+5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
 
             return `${basePrompt}${specificInstructions}${rules}`;
         };
 
+        // The main flow for generating and solving problems
         const ProblemSolverFlow = ({ onBackToHome }) => {
             const [currentView, setCurrentView] = useState('categories');
             const [selection, setSelection] = useState({});
@@ -1115,23 +1150,29 @@
                 else if (currentView === 'categories') onBackToHome();
             };
 
+            // A separate screen to handle the problem variations
             const VariationScreen = ({ topic, subtopic, onVariationSelect, onBack }) => {
                 return (
                    <ScreenWrapper>
-                       <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToSubtopics')}</button>
-                       <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
-                       <p className="text-gray-500 dark:text-gray-400 mb-6">{topic.name}</p>
-                       <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{t('selectProblemType')}</h3>
-                       <div className="space-y-3">
-                           {(problemVariations[lang][subtopic] || []).map(variation => (
+                        <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToSubtopics')}</button>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">{topic.name}</p>
+                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{t('selectProblemType')}</h3>
+                        <div className="space-y-3">
+                            {(problemVariations[lang]?.[subtopic]
+                               || problemVariations.en?.[subtopic]
+                               || problemVariations.es?.[subtopic]
+                               || [`Concept focus on ${subtopic}`, `Calculation practice on ${subtopic}`]
+                            ).map(variation => (
                                <button key={variation} onClick={() => onVariationSelect(variation)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                                 <ContentRenderer content={variation} />
+                                   <ContentRenderer content={variation} />
                                </button>
-                           ))}
-                       </div>
+                            ))}
+                        </div>
                    </ScreenWrapper>
-            )};
-        
+                )};
+            
+            // A separate screen to handle the difficulty selection
             const DifficultyScreen = ({ topic, subtopic, variation, onDifficultySelect, onBack }) => {
                 return (
                 <ScreenWrapper>
@@ -1150,8 +1191,9 @@
                         ))}
                     </div>
                 </ScreenWrapper>
-            )};
+                )};
 
+            // The main screen for displaying the generated problem and user interaction
             const ProblemScreen = ({ topic, subtopic, variation, difficulty, onBack, onTutorRequest }) => {
                 const [problem, setProblem] = useState(null);
                 const [isLoading, setIsLoading] = useState(true);
@@ -1159,33 +1201,27 @@
                 const [selectedOption, setSelectedOption] = useState(null);
                 const [feedback, setFeedback] = useState(null);
 
+                // API call to generate a problem based on the prompt
                 const generateProblemAPI = useCallback(async () => {
                     const prompt = getProblemIntelligentPrompt(subtopic, variation, difficulty, lang);
-                    let problemSchema = { type: "OBJECT", properties: { "question": { "type": "STRING" }, "options": { "type": "ARRAY", "items": { "type": "STRING" } }, "correctAnswerIndex": { "type": "INTEGER" }, "solution": { "type": "ARRAY", "items": { "type": "STRING" } }}, required: ["question", "options", "correctAnswerIndex", "solution"] };
-                    
-                    try {
-                        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                        const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: problemSchema } };
-                        const apiKey = ""; // API key will be injected in the execution environment
-                        const modelName = 'gemini-2.5-flash-preview-05-20'; 
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                        if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
-                        const result = await response.json();
-                        if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0].text) {
-                            const rawText = result.candidates[0].content.parts[0].text;
-                            const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                            try {
-                                return JSON.parse(cleanedText);
-                            } catch (parseError) {
-                                console.error("Failed to parse JSON response:", cleanedText);
-                                throw new Error("The AI generated a response with incorrect format.");
-                            }
-                        } else { throw new Error("The AI did not generate a valid response."); }
-                    } catch (e) {
-                        console.error("API Error:", e);
-                        throw e;
-                    }
+                    const problemSchema = {
+                        type: "OBJECT",
+                        properties: {
+                            question: { type: "STRING" },
+                            options: { type: "ARRAY", items: { type: "STRING" } },
+                            correctAnswerIndex: { type: "INTEGER" },
+                            solution: { type: "ARRAY", items: { type: "STRING" } }
+                        },
+                        required: ["question", "options", "correctAnswerIndex", "solution"]
+                    };
+                
+                    const data = await callBackend({
+                        prompt,
+                        responseSchema: problemSchema,
+                        temperature: 0.35,
+                        model: 'gemini-2.0-flash'
+                    });
+                    return data;
                 }, [subtopic, variation, difficulty, lang]);
 
                 const loadProblem = useCallback(async () => {
@@ -1199,6 +1235,7 @@
                         const problemFromApi = await generateProblemAPI();
                         if (!problemFromApi) return;
                         
+                        // Shuffle options to prevent the correct answer always being first
                         const options = [...problemFromApi.options];
                         const correctAnswer = options[0]; 
                         for (let i = options.length - 1; i > 0; i--) {
@@ -1304,6 +1341,7 @@
             );
         };
 
+        // The main flow for exploring content
         const ContentFlow = ({ onBackToHome }) => {
             const [currentView, setCurrentView] = useState('categories');
             const [selection, setSelection] = useState({});
@@ -1343,6 +1381,7 @@
             );
         };
 
+        // Footer component with legal links
         const Footer = ({ onNavigate }) => {
             const { t } = useLanguage();
             return (
@@ -1356,22 +1395,23 @@
             </footer>
         )};
 
+        // Legal page component for displaying Terms and Privacy policies
         const LegalPage = ({ title, children, onNavigate }) => {
             const { t } = useLanguage();
             return (
-             <ScreenWrapper>
-                <div className="max-w-3xl mx-auto p-6">
-                     <button onClick={(e) => onNavigate(e, '/')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8">&larr; {t('backToHome')}</button>
-                     <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg prose dark:prose-invert">
+               <ScreenWrapper>
+                 <div className="max-w-3xl mx-auto p-6">
+                    <button onClick={(e) => onNavigate(e, '/')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8">&larr; {t('backToHome')}</button>
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg prose dark:prose-invert">
                         <h1>{title}</h1>
                         {children}
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
                             {t('lastUpdated')}: julio de 2025.
                         </p>
-                     </div>
-                </div>
-            </ScreenWrapper>
-        )};
+                    </div>
+                 </div>
+               </ScreenWrapper>
+            )};
 
         // --- Main App Component ---
         const App = () => {
@@ -1380,6 +1420,7 @@
             const [currentFlow, setCurrentFlow] = useState('landing');
             const { t, lang } = useLanguage();
 
+            // Listen for changes in the URL hash for navigation
             useEffect(() => {
                 const handleHashChange = () => {
                     setPath(getCurrentPath());
@@ -1390,6 +1431,7 @@
                 };
             }, []);
 
+            // Handle navigation between different app sections
             const handleNavigate = (e, targetPath) => {
                 if (e) e.preventDefault();
                 window.location.hash = targetPath;
@@ -1444,7 +1486,7 @@
                 },
                 en: {
                     terms: (
-                         <div className="legal-text">
+                          <div className="legal-text">
                             <h3>1. Acceptance of Terms</h3>
                             <p>Welcome to PhysicLabAI. By using this application, you agree to comply with and be bound by the following terms and conditions of use. Please review them carefully.</p>
                             <h3>2. Educational Purpose</h3>
@@ -1455,10 +1497,10 @@
                             <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
                             <h3>5. Intellectual Property</h3>
                             <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
-                        </div>
+                          </div>
                     ),
                     privacy: (
-                        <div className="legal-text">
+                          <div className="legal-text">
                             <h3>1. Introduction</h3>
                             <p>Your privacy is important to us. This Privacy Policy explains how we handle information in PhysicLabAI.</p>
                             <h3>2. Information We Do Not Collect</h3>
@@ -1475,7 +1517,7 @@
                             <p>The queries you make to generate content or chat with the AI tutor are sent to Google's Gemini API. Google's handling of this data is subject to its own privacy policies. We recommend reviewing them to understand how they process information.</p>
                             <h3>5. Changes to the Policy</h3>
                             <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
-                        </div>
+                          </div>
                     )
                 }
             };
@@ -1522,6 +1564,7 @@
             );
         };
 
+        // Render the main app component into the DOM
         const container = document.getElementById('app-root');
         const root = ReactDOM.createRoot(container);
         root.render(
@@ -1532,3 +1575,4 @@
     </script>
 </body>
 </html>
+
