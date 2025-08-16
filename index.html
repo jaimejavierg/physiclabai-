@@ -388,17 +388,17 @@
                 {
                     category: 'Electricidad y Magnetismo',
                     topics: [
-                        { name: 'Electrostática', subtopics: ['Ley de Coulomb', 'Campo Eléctrico', 'Campo Eléctrico de Cargas Puntuales', 'Campo Eléctrico Uniforme', 'Superficies Equipotenciales'] },
-                        { name: 'Potencial y Energía Eléctrica', subtopics: ['Potencial Eléctrico', 'Potencial en Campos Uniformes', 'Energía Potencial Eléctrica', 'Trabajo Eléctrico'] },
-                        { name: 'Circuitos de Corriente Directa', subtopics: ['Corriente Eléctrica', 'Ley de Ohm', 'Resistencia y Resistividad', 'Resistencia y Temperatura', 'Capacitancia', 'Capacitores', 'Circuitos en Serie y Paralelo', 'Leyes de Kirchhoff', 'Circuitos RC', 'Constante de Tiempo'] },
-                        { name: 'Magnetismo', subtopics: ['Fuerza Magnética sobre Cargas', 'Fuerza Magnética sobre Corrientes', 'Campo Magnético de Conductores', 'Campo Magnético de una Espira', 'Campo Magnético de un Solenoide', 'Ley de Faraday', 'Ley de Lenz', 'Inducción Electromagnética', 'Aplicaciones: Motores y Generadores'] }
+                        { name: 'Electrostática', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
+                        { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
+                        { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitance', 'Capacitors', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
+                        { name: 'Magnetism', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Applications: Motors & Generators'] }
                     ]
                 },
                 {
                     category: 'Ondas y Óptica',
                     topics: [
                         { name: 'Ondas', subtopics: ['Propiedades de las Ondas', 'Periodo, Frecuencia y Longitud de Onda', 'Efecto Doppler', 'Interferencia', 'Ondas Estacionarias', 'Resonancia'] },
-                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Instrumentos Ópticos'] }
+                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Optical Instruments'] }
                     ]
                 }
             ],
@@ -1108,8 +1108,9 @@
 1.  **Main Topic:** The problem must be about **${subtopic}**.
 2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
 3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario.
-5.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
+4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
+5.  **Complexity:** For Intermediate, Advanced, and Exam Style problems, ensure they require multiple steps and a deeper understanding of the concepts, not just a single formula application.
+6.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
 \n`;
             
             const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
@@ -1218,7 +1219,7 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.35,
+                        temperature: 0.70, // Increased temperature for more creative problems
                         model: 'gemini-2.0-flash'
                     });
                     return data;
@@ -1575,4 +1576,5 @@
     </script>
 </body>
 </html>
+
 
