@@ -1113,6 +1113,10 @@
             const definition = difficultyDefinitions[lang][difficulty] || '';
             const correctText = lang === 'es' ? 'correcta' : 'correct';
 
+            const calculusRule = (difficulty === 'Basado en Cálculo' || difficulty === 'Calculus-Based')
+                ? "**MATHEMATICAL METHOD (NON-NEGOTIABLE):** As the difficulty is 'Calculus-Based', you MUST use calculus (integrals or derivatives) to solve the problem."
+                : "**MATHEMATICAL METHOD (NON-NEGOTIABLE):** As the difficulty is NOT 'Calculus-Based', you are STRICTLY FORBIDDEN from using calculus (integrals or derivatives). The solution MUST be purely algebraic.";
+
             const basePrompt = `**ROLE:** You are a meticulous physics examiner. Your primary goal is **ACCURACY** and **CLARITY**. You will create a physics problem based on a strict internal thought process.
 
 **INTERNAL THOUGHT PROCESS (Mandatory):** Before generating the JSON, you MUST follow these steps internally:
@@ -1133,6 +1137,7 @@
 * **SCENARIO VARIETY:** Use a clear, real-world scenario. **DO NOT USE drones, cars, or gymnasts.** Use diverse contexts like sports (a soccer ball being kicked), technology (a smartphone falling), or nature (a raindrop falling).
 * **LANGUAGE:** The entire output must be in ${lang === 'es' ? 'Spanish' : 'English'}.
 * **DIFFICULTY:** The problem MUST strictly adhere to the definition of **${difficulty}**: "${definition}".
+* ${calculusRule}
 * **CRITICAL VISUAL RESTRICTION:** DO NOT generate problems that refer to graphs, diagrams, figures, or any other visual elements. The problem must be 100% self-contained and solvable with the text provided.
 
 **JSON FORMATTING RULES (ZERO TOLERANCE):**
