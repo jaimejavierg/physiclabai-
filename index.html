@@ -128,7 +128,7 @@
             padding-left: 1.5rem;
             margin-bottom: 1rem;
         }
-          /* Added prose styles for legal pages */
+         /* Added prose styles for legal pages */
         .prose {
             max-width: 80ch; /* equivalent to max-w-3xl for readability */
         }
@@ -205,20 +205,50 @@
             const body = { prompt, responseSchema, temperature, model };
 
             try {
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                
-                const json = await response.json();
+                // This simulates a call to a backend that would, in turn, call the Gemini API.
+                // This implementation makes the direct call for demonstration purposes in this environment.
+                console.log("Calling Gemini API with prompt:", prompt);
 
-                if (!response.ok || !json.ok) {
-                    const errorMsg = json?.error || json?.detail || 'An unknown error occurred.';
-                    throw new Error(errorMsg);
+                if (model.includes('gemini')) { 
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    
+                    const payload = { contents: chatHistory, generationConfig: { temperature } };
+                    if (responseSchema) {
+                        payload.generationConfig.responseMimeType = "application/json";
+                        payload.generationConfig.responseSchema = responseSchema;
+                    }
+
+                    const apiKey = ""; // Canvas will provide this
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        if (responseSchema) {
+                            return JSON.parse(text);
+                        }
+                        return text;
+                    } else {
+                       throw new Error('Invalid response structure from Gemini API');
+                    }
                 }
-
-                return json.data;
+                
+                throw new Error(`Unsupported model: ${model}`);
 
             } catch (e) {
                 console.error("Backend call error:", e);
@@ -361,7 +391,7 @@
                             throwOnError: false
                         });
                     } catch (err) {
-                        // si KaTeX falla, dejamos el HTML ya sanitizado
+                        // if KaTeX fails, leave the sanitized HTML
                     }
                 }
             }, [content]);
@@ -401,9 +431,9 @@
                 {
                     category: 'Electricidad y Magnetismo',
                     topics: [
-                        { name: 'Electrostática', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
-                        { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
-                        { name: 'Direct Current Circuits', subtopics: ['Corriente Eléctrica', 'Ley de Ohm', 'Resistencia y Resistividad', 'Resistencia y Temperatura', 'Capacitancia', 'Capacitores', 'Circuitos en Serie y Paralelo', 'Leyes de Kirchhoff', 'Circuitos RC', 'Constante de Tiempo'] },
+                        { name: 'Electrostática', subtopics: ["Ley de Coulomb", 'Campo Eléctrico', 'Campo Eléctrico de Cargas Puntuales', 'Campo Eléctrico Uniforme', 'Superficies Equipotenciales'] },
+                        { name: 'Potencial y Energía Eléctrica', subtopics: ['Potencial Eléctrico', 'Potencial en Campos Uniformes', 'Energía Potencial Eléctrica', 'Trabajo Eléctrico'] },
+                        { name: 'Circuitos de Corriente Directa', subtopics: ['Corriente Eléctrica', 'Ley de Ohm', 'Resistencia y Resistividad', 'Resistencia y Temperatura', 'Capacitancia', 'Capacitores', 'Circuitos en Serie y Paralelo', 'Leyes de Kirchhoff', 'Circuitos RC', 'Constante de Tiempo'] },
                         { name: 'Magnetismo', subtopics: ['Fuerza Magnética sobre Cargas', 'Fuerza Magnética sobre Corrientes', 'Campo Magnético de Conductores', 'Campo Magnético de una Espira', 'Campo Magnético de un Solenoide', 'Ley de Faraday', 'Ley de Lenz', 'Inducción Electromagnética', 'Aplicaciones: Motores y Generadores'] }
                     ]
                 },
@@ -411,7 +441,7 @@
                     category: 'Ondas y Óptica',
                     topics: [
                         { name: 'Ondas', subtopics: ['Propiedades de las Ondas', 'Periodo, Frecuencia y Longitud de Onda', 'Efecto Doppler', 'Interferencia', 'Ondas Estacionarias', 'Resonancia'] },
-                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Optical Instruments'] }
+                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Instrumentos Ópticos'] }
                     ]
                 }
             ],
@@ -445,17 +475,17 @@
                 {
                     category: 'Electricity & Magnetism',
                     topics: [
-                        { name: 'Electrostática', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
+                        { name: 'Electrostatics', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
                         { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
-                        { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitancia', 'Capacitores', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
-                        { name: 'Magnetismo', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoide', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Aplicaciones: Motores y Generadores'] }
+                        { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitance', 'Capacitors', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
+                        { name: 'Magnetism', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Applications: Motors & Generators'] }
                     ]
                 },
                 {
-                    category: 'Ondas y Óptica',
+                    category: 'Waves & Optics',
                     topics: [
-                        { name: 'Ondas', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
-                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Optical Instruments'] }
+                        { name: 'Waves', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
+                        { name: 'Optics', subtopics: ['Reflection', 'Refraction (Snell\'s Law)', 'Plane Mirrors', 'Concave Mirrors', 'Convex Mirrors', 'Biconvex Lenses', 'Biconcave Lenses', 'Optical Instruments'] }
                     ]
                 }
             ]
@@ -605,7 +635,7 @@
                 'Torque': ['Calculation of torque about a point', 'Net torque and angular acceleration'],
                 'Rotational Equilibrium': ['Application of static equilibrium conditions'],
                 'Center of Gravity': ['Locating the center of gravity'],
-                'Moment of Inercia': ['Calculation of the moment of inertia'],
+                'Moment of Inertia': ['Calculation of the moment of inertia'],
                 'Parallel Axis Theorem': ["Application of Steiner's Theorem"],
                 'Simple Harmonic Motion': ['Analysis of period and frequency', 'Kinematics of SHM'],
                 'Simple Pendulum': ['Analysis of a pendulum\'s period'],
@@ -615,7 +645,7 @@
                 'Hydrostatic Pressure': ['Analysis of pressure in fluids at rest'],
                 "Archimedes' Principle": ['Analysis of buoyancy and buoyant force'],
                 'Surface Tension': ['Surface tension phenomena'],
-                'Capilaridad': ['Conceptual analysis of capillarity'],
+                'Capillarity': ['Conceptual analysis of capillarity'],
                 "Bernoulli's Equation": ["Application of Bernoulli's principle"],
                 'Venturi Effect': ['Analysis of the pressure-velocity relationship'],
                 'Temperature Scales': ['Conversion between thermometric scales'],
@@ -628,10 +658,10 @@
                 'Entropy': ['Conceptual analysis of entropy change'],
                 'Heat Engines': ['Analysis of a heat engine cycle'],
                 'Thermal Efficiency': ['Calculation of thermal efficiency'],
-                'Carnot Cycle': ['Análisis del ciclo y eficiencia de Carnot'],
+                'Carnot Cycle': ['Analysis of the Carnot cycle and efficiency'],
                 "Coulomb's Law": ['Force between point charges', 'Net force in a system of charges'],
                 'Electric Field': ['Field of a point charge', 'Force on a charge in an E field'],
-                'Electric Field of Point Charges': ['Superposición de campos eléctricos'],
+                'Electric Field of Point Charges': ['Superposition of electric fields'],
                 'Uniform Electric Field': ['Analysis of fields between parallel plates'],
                 'Equipotential Surfaces': ['Relationship between field and potential'],
                 'Electric Potential': ['Potential of a system of charges'],
@@ -643,33 +673,33 @@
                 'Resistance & Resistivity': ['Factors affecting resistance'],
                 'Resistance & Temperature': ['Variation of resistance with temperature'],
                 'Capacitance': ['Calculation of capacitance'],
-                'Capacitores': ['Charge and energy storage'],
+                'Capacitors': ['Charge and energy storage'],
                 'Series & Parallel Circuits': ['Analysis of resistor circuits', 'Analysis of capacitor circuits'],
                 "Kirchhoff's Laws": ["Application of the node rule", "Application of the loop rule"],
                 'RC Circuits': ['Analysis of the charging process', 'Analysis of the discharging process'],
                 'Time Constant': ['Meaning of the RC time constant'],
-                'Magnetic Force on Charges': ['Análisis de la fuerza de Lorentz'],
-                'Magnetic Force on Currents': ['Fuerza sobre un conductor en un campo B'],
-                'Campo Magnético de Conductores': ['Aplicación de la Ley de Ampere (conceptual)'],
-                'Campo Magnético de una Espira': ['Análisis del campo en el centro de una espira'],
-                'Campo Magnético de un Solenoide': ['Análisis del campo en un solenoide ideal'],
-                'Ley de Faraday': ['Análisis de la FEM inducida'],
-                'Ley de Lenz': ['Determinación del sentido de la corriente inducida'],
-                'Inducción Electromagnética': ['Aplicaciones conceptuales de la inducción'],
-                'Aplicaciones: Motores y Generadores': ['Principios de funcionamiento'],
-                'Propiedades de las Ondas': ['Relación entre velocidad, frecuencia y longitud de onda'],
-                'Periodo, Frecuencia y Longitud de Onda': ['Cálculos y conversiones'],
-                'Efecto Doppler': ['Análisis de la frecuencia aparente'],
-                'Interferencia': ['Análisis de interferencia constructiva y destructiva'],
-                'Ondas Estacionarias': ['Análisis de nodos y antinodos'],
-                'Resonancia': ['Resonancia phenomena in systems'],
-                'Reflexión': ['Aplicación de la ley de reflexión'],
-                'Refracción (Ley de Snell)': ['Análisis de la refracción de la luz'],
-                'Espejos Planos': ['Formación de imágenes en espejos planos'],
-                'Espejos Cóncavos': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de espejos'],
-                'Espejos Convexos': ['Formación de imágenes', 'Aplicación de la ecuación de espejos'],
-                'Lentes Biconvexas': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de lentes'],
-                'Lentes Bicóncavas': ['Formación de imágenes', 'Aplicación de la ecuación de lentes'],
+                'Magnetic Force on Charges': ['Analysis of the Lorentz force'],
+                'Magnetic Force on Currents': ['Force on a conductor in a B field'],
+                'Magnetic Field of Conductors': ['Application of Ampere\'s Law (conceptual)'],
+                'Magnetic Field of a Loop': ['Analysis of the field at the center of a loop'],
+                'Magnetic Field of a Solenoid': ['Analysis of the field in an ideal solenoid'],
+                "Faraday's Law": ['Analysis of induced EMF'],
+                "Lenz's Law": ['Determining the direction of induced current'],
+                'Electromagnetic Induction': ['Conceptual applications of induction'],
+                'Applications: Motors & Generators': ['Principles of operation'],
+                'Wave Properties': ['Relationship between speed, frequency, and wavelength'],
+                'Period, Frequency & Wavelength': ['Calculations and conversions'],
+                'Doppler Effect': ['Analysis of apparent frequency'],
+                'Interference': ['Analysis of constructive and destructive interference'],
+                'Standing Waves': ['Analysis of nodes and antinodes'],
+                'Resonance': ['Resonance phenomena in systems'],
+                'Reflection': ['Application of the law of reflection'],
+                'Refraction (Snell\'s Law)': ['Analysis of light refraction'],
+                'Plane Mirrors': ['Image formation in plane mirrors'],
+                'Concave Mirrors': ['Image formation (cases)', 'Application of the mirror equation'],
+                'Convex Mirrors': ['Image formation', 'Application of the mirror equation'],
+                'Biconvex Lenses': ['Image formation (cases)', 'Application of the lens equation'],
+                'Biconcave Lenses': ['Image formation', 'Application of the lens equation'],
                 'Optical Instruments': ['Conceptual analysis of instruments']
             }
         };
@@ -1120,7 +1150,7 @@
 1.  **Main Topic:** The problem must be about **${subtopic}**.
 2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
 3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
+4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh. **To ensure variety, explicitly avoid using scenarios involving drones or simple cars unless the concept absolutely requires it. Instead, think about creative contexts like sports (a golf club hitting a ball), astrophysics (a comet's trajectory changing), engineering (a crash test dummy), or everyday situations (a person jumping on a trampoline).**
 5.  **Complexity:** For Intermediate, Advanced, and Exam Style problems, ensure they require multiple steps and a deeper understanding of the concepts, not just a single formula application.
 6.  **Calculation Precision:** All numerical values in the problem must be carefully selected so that the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches one of the provided options exactly. Avoid complex fractions or irrational numbers. **You must perform all calculations and verifications before finalizing the output.**
 7.  **Calculation Constraint:** The problems must be solvable without using integral or differential calculus, unless the difficulty level is explicitly "Basado en Cálculo" or "Calculus-Based".
@@ -1169,23 +1199,23 @@
             // A separate screen to handle the problem variations
             const VariationScreen = ({ topic, subtopic, onVariationSelect, onBack }) => {
                 return (
-                   <ScreenWrapper>
+                    <ScreenWrapper>
                         <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToSubtopics')}</button>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
                         <p className="text-gray-500 dark:text-gray-400 mb-6">{topic.name}</p>
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{t('selectProblemType')}</h3>
                         <div className="space-y-3">
                             {(problemVariations[lang]?.[subtopic]
-                               || problemVariations.en?.[subtopic]
-                               || problemVariations.es?.[subtopic]
-                               || [`Concept focus on ${subtopic}`, `Calculation practice on ${subtopic}`]
+                                || problemVariations.en?.[subtopic]
+                                || problemVariations.es?.[subtopic]
+                                || [`Concept focus on ${subtopic}`, `Calculation practice on ${subtopic}`]
                             ).map(variation => (
-                               <button key={variation} onClick={() => onVariationSelect(variation)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                                   <ContentRenderer content={variation} />
-                               </button>
+                                <button key={variation} onClick={() => onVariationSelect(variation)} className="w-full bg-white border border-gray-300 text-left text-gray-800 font-medium p-4 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                                    <ContentRenderer content={variation} />
+                                </button>
                             ))}
                         </div>
-                   </ScreenWrapper>
+                    </ScreenWrapper>
                 )};
             
             // A separate screen to handle the difficulty selection
@@ -1230,12 +1260,12 @@
                         },
                         required: ["question", "options", "correctAnswerIndex", "solution"]
                     };
-                
+                    
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.5, // Reduced temperature for better accuracy
-                        model: 'gemini-2.0-pro' // Switched to Pro model for better math
+                        temperature: 0.9, // Increased temperature for more creative and varied problems
+                        model: 'gemini-1.5-pro-preview-0514' // Using a powerful model for creativity
                     });
                     return data;
                 }, [subtopic, variation, difficulty, lang]);
@@ -1262,7 +1292,7 @@
                         
                         setProblem({ ...problemFromApi, options: options, correctAnswerIndex: newCorrectIndex });
                     } catch (e) {
-                        setError("Ocurrió un error al generar el problema. Por favor, inténtalo de nuevo.");
+                        setError("An error occurred while generating the problem. Please try again.");
                     } finally {
                         setIsLoading(false);
                     }
@@ -1417,14 +1447,14 @@
             return (
                <ScreenWrapper>
                  <div className="max-w-3xl mx-auto p-6">
-                    <button onClick={(e) => onNavigate(e, '/')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8">&larr; {t('backToHome')}</button>
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg prose dark:prose-invert">
-                        <h1>{title}</h1>
-                        {children}
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            {t('lastUpdated')}: julio de 2025.
-                        </p>
-                    </div>
+                   <button onClick={(e) => onNavigate(e, '/')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8">&larr; {t('backToHome')}</button>
+                   <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg prose dark:prose-invert">
+                       <h1>{title}</h1>
+                       {children}
+                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+                           {t('lastUpdated')}: July 2024.
+                       </p>
+                   </div>
                  </div>
                </ScreenWrapper>
             )};
@@ -1591,9 +1621,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
