@@ -201,16 +201,60 @@
         });
         
         // --- Backend API helper function as requested ---
-        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.0-flash' }) {
-          const res = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, responseSchema, temperature, model })
-          });
-          const json = await res.json();
-          if (!res.ok) throw new Error(json?.error || json?.detail || 'Backend error');
-          if (!json.ok) throw new Error(json?.error || 'Invalid response from model');
-          return json.data; // si schema: JSON; si no: texto
+        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.5-flash-preview-05-20' }) {
+          const payload = {
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          };
+          
+          if (responseSchema) {
+            payload.generationConfig = {
+              responseMimeType: "application/json",
+              responseSchema: responseSchema,
+            };
+          }
+          
+          const apiKey = "";
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+          let response;
+          let attempts = 0;
+          const maxAttempts = 5;
+          const baseDelay = 1000;
+
+          while (attempts < maxAttempts) {
+              try {
+                  response = await fetch(apiUrl, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(payload)
+                  });
+
+                  if (response.status !== 429) { // 429 is Too Many Requests
+                      const result = await response.json();
+                      const contentPart = result?.candidates?.[0]?.content?.parts?.[0];
+                      if (!contentPart) {
+                          throw new Error('Invalid response structure from model.');
+                      }
+
+                      if (responseSchema) {
+                          const jsonText = contentPart.text;
+                          return JSON.parse(jsonText);
+                      } else {
+                          return contentPart.text;
+                      }
+                  } else {
+                      attempts++;
+                      if (attempts < maxAttempts) {
+                          const delay = baseDelay * Math.pow(2, attempts - 1) + Math.random() * 500;
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                      } else {
+                          throw new Error('API request failed after multiple retries due to rate limiting.');
+                      }
+                  }
+              } catch (e) {
+                  throw e;
+              }
+          }
         }
 
         // --- Internationalization (i18n) ---
@@ -403,7 +447,7 @@
                 }
             ],
             en: [
-                 {
+                {
                     category: 'Fundamentals',
                     topics: [
                         { name: 'Measurement & Units', subtopics: ['Unit Conversion', 'Significant Figures', 'Dimensional Analysis', 'Order of Magnitude', 'Error Calculation', 'Graph Analysis'] },
@@ -432,17 +476,17 @@
                 {
                     category: 'Electricity & Magnetism',
                     topics: [
-                        { name: 'Electrostatics', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
+                        { name: 'Electrostática', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
                         { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
                         { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitance', 'Capacitors', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
-                        { name: 'Magnetism', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Applications: Motors & Generators'] }
+                        { name: 'Magnetismo', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Aplicaciones: Motores y Generadores'] }
                     ]
                 },
                 {
                     category: 'Waves & Optics',
                     topics: [
-                        { name: 'Waves', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
-                        { name: 'Optics', subtopics: ['Reflection', 'Refraction (Snell\'s Law)', 'Plane Mirrors', 'Concave Mirrors', 'Convex Mirrors', 'Biconvex Lenses', 'Biconcave Lenses', 'Optical Instruments'] }
+                        { name: 'Ondas', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
+                        { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Snell\'s Law)', 'Plane Mirrors', 'Concave Mirrors', 'Convex Mirrors', 'Biconvex Lenses', 'Biconcave Lenses', 'Optical Instruments'] }
                     ]
                 }
             ]
@@ -636,31 +680,31 @@
                 'RC Circuits': ['Analysis of the charging process', 'Analysis of the discharging process'],
                 'Time Constant': ['Meaning of the RC time constant'],
                 'Magnetic Force on Charges': ['Analysis of the Lorentz force'],
-                'Magnetic Force on Currents': ['Force on a conductor in a B field'],
-                'Magnetic Field of Conductors': ["Application of Ampere's Law (conceptual)"],
-                'Magnetic Field of a Loop': ['Analysis of the field at the center of a loop'],
-                'Magnetic Field of a Solenoid': ['Analysis of the field in an ideal solenoid'],
-                "Faraday's Law": ['Analysis of induced EMF'],
-                "Lenz's Law": ['Determining the direction of induced current'],
-                'Electromagnetic Induction': ['Conceptual applications of induction'],
-                'Applications: Motors & Generators': ['Operating principles'],
-                'Wave Properties': ['Relationship between speed, frequency, and wavelength'],
-                'Period, Frequency & Wavelength': ['Calculations and conversions'],
-                'Doppler Effect': ['Analysis of apparent frequency'],
-                'Interference': ['Analysis of constructive and destructive interference'],
-                'Standing Waves': ['Analysis of nodes and antinodes'],
-                'Resonance': ['Resonance phenomena in systems'],
-                'Reflexión': ['Application of the law of reflection'],
-                'Refracción (Ley de Snell)': ['Angle relations with indices', 'Critical angle & total internal reflection'],
-                'Espejos Planos': ['Image formation in plane mirrors'],
-                'Espejos Cóncavos': ['Image formation (casos)', 'Application of the mirror equation'],
-                'Espejos Convexos': ['Image formation', 'Application of the mirror equation'],
-                'Lentes Biconvexas': ['Image formation (casos)', 'Application of the lens equation'],
-                'Lentes Bicóncavas': ['Image formation', 'Application of the lens equation'],
-                'Optical Instruments': ['Conceptual analysis of instruments']
+                'Fuerza Magnética sobre Corrientes': ['Fuerza sobre un conductor en un campo B'],
+                'Campo Magnético de Conductores': ['Aplicación de la Ley de Ampere (conceptual)'],
+                'Campo Magnético de una Espira': ['Análisis del campo en el centro de una espira'],
+                'Campo Magnético de un Solenoide': ['Análisis del campo en un solenoide ideal'],
+                'Ley de Faraday': ['Análisis de la FEM inducida'],
+                'Ley de Lenz': ['Determinación del sentido de la corriente inducida'],
+                'Inducción Electromagnética': ['Aplicaciones conceptuales de la inducción'],
+                'Aplicaciones: Motores y Generadores': ['Principios de funcionamiento'],
+                'Propiedades de las Ondas': ['Relación entre velocidad, frecuencia y longitud de onda'],
+                'Periodo, Frecuencia y Longitud de Onda': ['Cálculos y conversiones'],
+                'Efecto Doppler': ['Análisis de la frecuencia aparente'],
+                'Interferencia': ['Análisis de interferencia constructiva y destructiva'],
+                'Ondas Estacionarias': ['Análisis de nodos y antinodos'],
+                'Resonancia': ['Fenómenos de resonancia en sistemas'],
+                'Reflexión': ['Aplicación de la ley de reflexión'],
+                'Refracción (Ley de Snell)': ['Análisis de la refracción de la luz'],
+                'Espejos Planos': ['Formación de imágenes en espejos planos'],
+                'Espejos Cóncavos': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de espejos'],
+                'Espejos Convexos': ['Formación de imágenes', 'Aplicación de la ecuación de espejos'],
+                'Lentes Biconvexas': ['Formación de imágenes (casos)', 'Aplicación de la ecuación de lentes'],
+                'Lentes Bicóncavas': ['Formación de imágenes', 'Aplicación de la ecuación de lentes'],
+                'Instrumentos Ópticos': ['Análisis conceptual de instrumentos']
             }
         };
-        
+
         // Define difficulty levels for problems
         const difficultyLevels = {
             es: ['Análisis Conceptual', 'Fundamental', 'Intermedio', 'Avanzado', 'Estilo Examen (AP)', 'Basado en Cálculo'],
@@ -948,16 +992,16 @@
 **Language:** The entire output, including all content, must be in ${lang === 'es' ? 'Spanish' : 'English'}.
 
 **Formatting and Content Instructions (VERY STRICT):**
-1.  **Output Format:** The output MUST be a valid JSON object matching the provided schema. It must be an array of objects.
-2.  **Block Types and LaTeX Rules:**
+1.  **Output Format:** The output MUST be a valid JSON object matching the provided schema. It must be an array of objects.
+2.  **Block Types and LaTeX Rules:**
     * \`"type": "heading1"\`: For the main title (the sub-topic name).
     * \`"type": "heading2"\`: For subtitles like "Introduction", "Key Formula", "Example", "Summary".
     * \`"type": "paragraph"\`: For explanatory text. For any mathematical notation within a paragraph, you MUST use inline LaTeX delimiters (\`$...\$\`).
     * \`"type": "formula"\`: For mathematical equations. The "content" field must contain only the LaTeX code, without \`$\` delimiters.
     * \`"type": "example"\`: For solved examples. The "content" field must be formatted with \`**${lang === 'es' ? 'Planteamiento' : 'Approach'}:**\`, \`**${lang === 'es' ? 'Sustitución' : 'Substitution'}:**\`, and \`**${lang === 'es' ? 'Resultado' : 'Result'}:**\`. **CRITICAL LATEX RULE:** Within the example content, ALL mathematical notation (variables, numbers with units, equations) MUST be wrapped in inline LaTeX delimiters (\`$...\$\`). For example: \`$F = m \\times a$\`, \`$10 \\text{ kg}$\`, \`$\\mu_s = 0.3$\`.
     * \`"type": "graph"\`: **ONLY if the topic explicitly requires it** (e.g., kinematics graphs), include a block of this type. Provide realistic data.
-3.  **Additional Rule:** The guide must be purely algebraic and conceptual. **IT MUST NOT USE DIFFERENTIAL OR INTEGRAL CALCULUS.**
-4.  **Tone:** Absolutely formal and academic.`;
+3.  **Additional Rule:** The guide must be purely algebraic and conceptual. **IT MUST NOT USE DIFFERENTIAL OR INTEGRAL CALCULUS.**
+4.  **Tone:** Absolutely formal and academic.`;
 
                 // Reemplazando la llamada a la API por la llamada al backend
                 try {
@@ -965,7 +1009,7 @@
                         prompt,
                         responseSchema: guideSchema,
                         temperature: 0.30,
-                        model: 'gemini-2.0-flash'
+                        model: 'gemini-2.5-flash-preview-05-20'
                     });
                     setContent(data);
                 } catch (e) {
@@ -1065,7 +1109,7 @@
                     const text = await callBackend({
                         prompt,
                         temperature: 0.50,
-                        model: 'gemini-2.0-flash'
+                        model: 'gemini-2.5-flash-preview-05-20'
                     });
                     setChat(prev => [...prev, { role: 'ai', text }]);
                 } catch (e) {
@@ -1105,23 +1149,23 @@
             let basePrompt = `You are an expert physics professor. Your task is to generate a unique and creative physics problem. The problem's characteristics must match the following difficulty definition:\n\n**Difficulty Level: ${difficulty}**\n**Definition:** ${definition}\n\n`;
 
             const specificInstructions = `**Critical Content and Variety Instructions:**
-1.  **Main Topic:** The problem must be about **${subtopic}**.
-2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
-3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
-4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
+1.  **Main Topic:** The problem must be about **${subtopic}**.
+2.  **Specific Focus:** Within that topic, the problem must focus on the concept of **"${variation}"**. The main question and solution must revolve around this concept.
+3.  **Coherence and Realism:** The problem scenario MUST BE PHYSICALLY POSSIBLE AND LOGICAL.
+4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
 5.  **Complexity:** For Intermediate, Advanced, and Exam Style problems, ensure they require multiple steps and a deeper understanding of the concepts, not just a single formula application.
 6.  **Calculation Precision:** All numerical values in the problem must be carefully selected so that the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches one of the provided options exactly. Avoid complex fractions or irrational numbers. **You must perform all calculations and verifications before finalizing the output.**
 7.  **Calculation Constraint:** The problems must be solvable without using integral or differential calculus, unless the difficulty level is explicitly "Basado en Cálculo" or "Calculus-Based".
-8.  **Include Units in Options:** The values in the "options" array **MUST** include their respective units. For example, instead of "10.0", it should be "$10.0 \\text{ m/s}$".
-9.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
+8.  **Include Units in Options:** The values in the "options" array **MUST** include their respective units. For example, instead of "10.0", it should be "$10.0 \\text{ m/s}$".
+9.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
 \n`;
             
             const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
-1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
-2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
-3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
-4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors.
-5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
+1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
+2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
+3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
+4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors.
+5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
 
             return `${basePrompt}${specificInstructions}${rules}`;
         };
@@ -1222,8 +1266,8 @@
                     const data = await callBackend({
                         prompt,
                         responseSchema: problemSchema,
-                        temperature: 0.5, // Reduced temperature for better accuracy
-                        model: 'gemini-2.0-pro' // Switched to Pro model for better math
+                        temperature: 0.5, 
+                        model: 'gemini-2.0-pro'
                     });
                     return data;
                 }, [subtopic, variation, difficulty, lang]);
@@ -1490,7 +1534,7 @@
                 },
                 en: {
                     terms: (
-                          <div className="legal-text">
+                            <div className="legal-text">
                             <h3>1. Acceptance of Terms</h3>
                             <p>Welcome to PhysicLabAI. By using this application, you agree to comply with and be bound by the following terms and conditions of use. Please review them carefully.</p>
                             <h3>2. Educational Purpose</h3>
@@ -1501,10 +1545,10 @@
                             <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
                             <h3>5. Intellectual Property</h3>
                             <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
-                          </div>
+                            </div>
                     ),
                     privacy: (
-                          <div className="legal-text">
+                            <div className="legal-text">
                             <h3>1. Introduction</h3>
                             <p>Your privacy is important to us. This Privacy Policy explains how we handle information in PhysicLabAI.</p>
                             <h3>2. Information We Do Not Collect</h3>
@@ -1521,7 +1565,7 @@
                             <p>The queries you make to generate content or chat with the AI tutor are sent to Google's Gemini API. Google's handling of this data is subject to its own privacy policies. We recommend reviewing them to understand how they process information.</p>
                             <h3>5. Changes to the Policy</h3>
                             <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
-                          </div>
+                            </div>
                     )
                 }
             };
@@ -1579,6 +1623,7 @@
     </script>
 </body>
 </html>
+
 
 
 
