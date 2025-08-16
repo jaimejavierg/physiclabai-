@@ -592,7 +592,7 @@
                 'Torque': ['Calculation of torque about a point', 'Net torque and angular acceleration'],
                 'Rotational Equilibrium': ['Application of static equilibrium conditions'],
                 'Center of Gravity': ['Locating the center of gravity'],
-                'Moment of Inertia': ['Calculation of the moment of inertia'],
+                'Moment of Inercia': ['Calculation of the moment of inertia'],
                 'Parallel Axis Theorem': ["Application of Steiner's Theorem"],
                 'Simple Harmonic Motion': ['Analysis of period and frequency', 'Kinematics of SHM'],
                 'Simple Pendulum': ['Analysis of a pendulum\'s period'],
@@ -653,9 +653,9 @@
                 'Reflexión': ['Application of the law of reflection'],
                 'Refracción (Ley de Snell)': ['Angle relations with indices', 'Critical angle & total internal reflection'],
                 'Espejos Planos': ['Image formation in plane mirrors'],
-                'Espejos Cóncavos': ['Image formation (cases)', 'Application of the mirror equation'],
+                'Espejos Cóncavos': ['Image formation (casos)', 'Application of the mirror equation'],
                 'Espejos Convexos': ['Image formation', 'Application of the mirror equation'],
-                'Lentes Biconvexas': ['Image formation (cases)', 'Application of the lens equation'],
+                'Lentes Biconvexas': ['Image formation (casos)', 'Application of the lens equation'],
                 'Lentes Bicóncavas': ['Image formation', 'Application of the lens equation'],
                 'Optical Instruments': ['Conceptual analysis of instruments']
             }
@@ -1111,7 +1111,8 @@
 4.  **Scenario Variety:** You MUST invent a completely NEW and ORIGINAL scenario. This is a crucial instruction to avoid generating repetitive problems. Make each problem feel distinct and fresh.
 5.  **Complexity:** For Intermediate, Advanced, and Exam Style problems, ensure they require multiple steps and a deeper understanding of the concepts, not just a single formula application.
 6.  **Calculation Precision:** All numerical values in the problem must be carefully selected so that the **correct answer is a simple, clean decimal number** (e.g., 2.5, 10.0, 0.5) that matches one of the provided options exactly. Avoid complex fractions or irrational numbers. **You must perform all calculations and verifications before finalizing the output.**
-7.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
+7.  **Include Units in Options:** The values in the "options" array **MUST** include their respective units. For example, instead of "10.0", it should be "$10.0 \\text{ m/s}$".
+8.  **Randomness Factor (ignore, for variety only):** ${randomFactor}
 \n`;
             
             const rules = `**CRITICAL FORMATTING RULES (ZERO TOLERANCE):**
@@ -1180,7 +1181,7 @@
                 <ScreenWrapper>
                     <button onClick={onBack} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4">&larr; {t('backToProblemType')}</button>
                     <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{subtopic}</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-2">{topic.name}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">{topic.name}</p>
                     <div className="text-gray-500 dark:text-gray-400 mb-6">
                         <ContentRenderer content={variation} />
                     </div>
@@ -1198,7 +1199,7 @@
             // The main screen for displaying the generated problem and user interaction
             const ProblemScreen = ({ topic, subtopic, variation, difficulty, onBack, onTutorRequest }) => {
                 const [problem, setProblem] = useState(null);
-                const [isLoading, setIsLoading] = useState(useState(true));
+                const [isLoading, setIsLoading] = useState(true);
                 const [error, setError] = useState('');
                 const [selectedOption, setSelectedOption] = useState(null);
                 const [feedback, setFeedback] = useState(null);
@@ -1577,5 +1578,6 @@
     </script>
 </body>
 </html>
+
 
 
