@@ -448,13 +448,13 @@
                         { name: 'Electrostática', subtopics: ["Coulomb's Law", 'Electric Field', 'Electric Field of Point Charges', 'Uniform Electric Field', 'Equipotential Surfaces'] },
                         { name: 'Electric Potential & Energy', subtopics: ['Electric Potential', 'Potential in Uniform Fields', 'Electric Potential Energy', 'Electric Work'] },
                         { name: 'Direct Current Circuits', subtopics: ['Electric Current', "Ohm's Law", 'Resistance & Resistivity', 'Resistance & Temperature', 'Capacitancia', 'Capacitores', 'Series & Parallel Circuits', "Kirchhoff's Laws", 'RC Circuits', 'Time Constant'] },
-                        { name: 'Magnetismo', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoid', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Aplicaciones: Motores y Generadores'] }
+                        { name: 'Magnetismo', subtopics: ['Magnetic Force on Charges', 'Magnetic Force on Currents', 'Magnetic Field of Conductors', 'Magnetic Field of a Loop', 'Magnetic Field of a Solenoide', "Faraday's Law", "Lenz's Law", 'Electromagnetic Induction', 'Aplicaciones: Motores y Generadores'] }
                     ]
                 },
                 {
                     category: 'Ondas y Óptica',
                     topics: [
-                        { name: 'Ondas', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interferencia', 'Ondas Estacionarias', 'Resonancia'] },
+                        { name: 'Ondas', subtopics: ['Wave Properties', 'Period, Frequency & Wavelength', 'Doppler Effect', 'Interference', 'Standing Waves', 'Resonance'] },
                         { name: 'Óptica', subtopics: ['Reflexión', 'Refracción (Ley de Snell)', 'Espejos Planos', 'Espejos Cóncavos', 'Espejos Convexos', 'Lentes Biconvexas', 'Lentes Bicóncavas', 'Optical Instruments'] }
                     ]
                 }
@@ -631,7 +631,7 @@
                 'Carnot Cycle': ['Análisis del ciclo y eficiencia de Carnot'],
                 "Coulomb's Law": ['Force between point charges', 'Net force in a system of charges'],
                 'Electric Field': ['Field of a point charge', 'Force on a charge in an E field'],
-                'Electric Field of Point Charges': ['Superposition of electric fields'],
+                'Electric Field of Point Charges': ['Superposición de campos eléctricos'],
                 'Uniform Electric Field': ['Analysis of fields between parallel plates'],
                 'Equipotential Surfaces': ['Relationship between field and potential'],
                 'Electric Potential': ['Potential of a system of charges'],
@@ -643,20 +643,20 @@
                 'Resistance & Resistivity': ['Factors affecting resistance'],
                 'Resistance & Temperature': ['Variation of resistance with temperature'],
                 'Capacitance': ['Calculation of capacitance'],
-                'Capacitors': ['Charge and energy storage'],
+                'Capacitores': ['Charge and energy storage'],
                 'Series & Parallel Circuits': ['Analysis of resistor circuits', 'Analysis of capacitor circuits'],
                 "Kirchhoff's Laws": ["Application of the node rule", "Application of the loop rule"],
                 'RC Circuits': ['Analysis of the charging process', 'Analysis of the discharging process'],
                 'Time Constant': ['Meaning of the RC time constant'],
-                'Magnetic Force on Charges': ['Analysis of the Lorentz force'],
-                'Magnetic Force on Currents': ['Force on a conductor in a B field'],
-                'Magnetic Field of Conductors': ["Application of Ampere's Law (conceptual)"],
-                'Magnetic Field of a Loop': ['Analysis of the field at the center of a loop'],
-                'Magnetic Field of a Solenoid': ['Analysis of the field in an ideal solenoid'],
-                "Faraday's Law": ['Analysis of induced EMF'],
-                "Lenz's Law": ['Determining the direction of induced current'],
-                'Electromagnetic Induction': ['Conceptual applications of induction'],
-                'Aplicaciones: Motores y Generadores': ['Operating principles'],
+                'Magnetic Force on Charges': ['Análisis de la fuerza de Lorentz'],
+                'Magnetic Force on Currents': ['Fuerza sobre un conductor en un campo B'],
+                'Campo Magnético de Conductores': ['Aplicación de la Ley de Ampere (conceptual)'],
+                'Campo Magnético de una Espira': ['Análisis del campo en el centro de una espira'],
+                'Campo Magnético de un Solenoide': ['Análisis del campo en un solenoide ideal'],
+                'Ley de Faraday': ['Análisis de la FEM inducida'],
+                'Ley de Lenz': ['Determinación del sentido de la corriente inducida'],
+                'Inducción Electromagnética': ['Aplicaciones conceptuales de la inducción'],
+                'Aplicaciones: Motores y Generadores': ['Principios de funcionamiento'],
                 'Propiedades de las Ondas': ['Relación entre velocidad, frecuencia y longitud de onda'],
                 'Periodo, Frecuencia y Longitud de Onda': ['Cálculos y conversiones'],
                 'Efecto Doppler': ['Análisis de la frecuencia aparente'],
@@ -1112,6 +1112,7 @@
         const getProblemIntelligentPrompt = (subtopic, variation, difficulty, lang) => {
             const randomFactor = Math.random();
             const definition = difficultyDefinitions[lang][difficulty] || '';
+            const correctText = lang === 'es' ? 'correcta' : 'correct';
 
             let basePrompt = `You are an expert physics professor. Your task is to generate a unique and creative physics problem. The problem's characteristics must match the following difficulty definition:\n\n**Difficulty Level: ${difficulty}**\n**Definition:** ${definition}\n\n`;
 
@@ -1131,7 +1132,7 @@
 1.  **Unique Values:** Generate random and different numerical values each time, with only one decimal place (e.g., 3.2, 15.0, 9.8).
 2.  **Strict JSON Format:** The output MUST be a valid JSON object and nothing else.
 3.  **IMPECCABLE LaTeX Notation:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\` or \`$$...$$\`).
-4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors.
+4.  **Fixed Correct Answer:** ALWAYS place the correct answer in the first position of the 'options' array and set 'correctAnswerIndex' to 0. The other 3 options must be plausible distractors. The model must not generate any text trying to justify the other options as correct under different assumptions. The prompt must be written so that there is only one ${correctText} answer based on the provided information.
 5.  **Language:** The problem and solution must be in ${lang === 'es' ? 'Spanish' : 'English'}.`;
 
             return `${basePrompt}${specificInstructions}${rules}`;
