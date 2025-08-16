@@ -1110,7 +1110,6 @@
         // --- UPDATED Prompt Generation with Difficulty Definitions ---
         // This function intelligently constructs the prompt for generating a physics problem
         const getProblemIntelligentPrompt = (subtopic, variation, difficulty, lang) => {
-            const randomFactor = Math.random();
             const definition = difficultyDefinitions[lang][difficulty] || '';
             const correctText = lang === 'es' ? 'correcta' : 'correct';
 
@@ -1133,6 +1132,7 @@
     * Another time, ask for a conceptual comparison between two different scenarios.
 * **SCENARIO VARIETY:** Use a clear, real-world scenario. **DO NOT USE drones, cars, or gymnasts.** Use diverse contexts like sports (a soccer ball being kicked), technology (a smartphone falling), or nature (a raindrop falling).
 * **LANGUAGE:** The entire output must be in ${lang === 'es' ? 'Spanish' : 'English'}.
+* **DIFFICULTY:** The problem MUST strictly adhere to the definition of **${difficulty}**: "${definition}".
 
 **JSON FORMATTING RULES (ZERO TOLERANCE):**
 1.  **Strict JSON:** The output MUST be a valid JSON object and nothing else.
@@ -1517,7 +1517,7 @@
                             <p>This application uses Google's Gemini API to generate study guides, problems, and solutions. Like any artificial intelligence tool, the generated information may contain inaccuracies, errors, or may not be complete. Users are responsible for verifying and validating the information obtained through the application with reliable academic sources.</p>
                             <h3>4. User Responsibility</h3>
                             <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
-                            <h3>5. Intellectual Property</h3>
+                            <h3>5. Propiedad Intelectual</h3>
                             <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
                             </div>
                     ),
@@ -1537,7 +1537,7 @@
                             <p>This data is aggregated and cannot be linked to an individual user. The sole purpose of this collection is to improve the quality of our service.</p>
                             <h3>4. Third-Party APIs (Google Gemini)</h3>
                             <p>The queries you make to generate content or chat with the AI tutor are sent to Google's Gemini API. Google's handling of this data is subject to its own privacy policies. We recommend reviewing them to understand how they process information.</p>
-                            <h3>5. Cambios en la Política</h3>
+                            <h3>5. Changes to the Policy</h3>
                             <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
                             </div>
                     )
