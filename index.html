@@ -1133,10 +1133,11 @@
 * **SCENARIO VARIETY:** Use a clear, real-world scenario. **DO NOT USE drones, cars, or gymnasts.** Use diverse contexts like sports (a soccer ball being kicked), technology (a smartphone falling), or nature (a raindrop falling).
 * **LANGUAGE:** The entire output must be in ${lang === 'es' ? 'Spanish' : 'English'}.
 * **DIFFICULTY:** The problem MUST strictly adhere to the definition of **${difficulty}**: "${definition}".
+* **CRITICAL VISUAL RESTRICTION:** DO NOT generate problems that refer to graphs, diagrams, figures, or any other visual elements. The problem must be 100% self-contained and solvable with the text provided.
 
 **JSON FORMATTING RULES (ZERO TOLERANCE):**
 1.  **Strict JSON:** The output MUST be a valid JSON object and nothing else.
-2.  **LaTeX:** ALL mathematical notation MUST be inside dollar sign delimiters (\`$...\$\`).
+2.  **LaTeX:** ALL mathematical notation, including numbers, variables, and units in the question, options, and solution, MUST be inside dollar sign delimiters (\`$...\$\`).
 3.  **Correct Answer First:** The correct answer MUST be the first element in the 'options' array, and 'correctAnswerIndex' MUST be 0.
 4.  **Units:** All numerical options MUST include their units within the LaTeX delimiters (e.g., "$12.5 \\text{ Ns}$").
 `;
