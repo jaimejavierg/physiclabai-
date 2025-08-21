@@ -201,8 +201,8 @@
         });
         
         // --- Backend API helper function as requested ---
-        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.5-flash-preview-05-20' }) {
-            const body = { prompt, responseSchema, temperature, model };
+        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.5-flash-preview-05-20', top_p = 0.95 }) {
+            const body = { prompt, responseSchema, temperature, model, top_p };
 
             try {
                 const response = await fetch('/api/generate', {
@@ -225,6 +225,106 @@
                 throw new Error(e.message || 'Error communicating with the backend.');
             }
         }
+
+        // --- NEW PROMPT ARCHITECTURE & VALIDATION ---
+
+        /**
+         * Creates a concise, explicit prompt for Gemini based on problem difficulty.
+         * @param {object} params - The parameters for the prompt.
+         * @param {string} params.subtopic - The specific physics subtopic.
+         * @param {string} params.variation - The type of problem variation.
+         * @param {string} params.difficulty - The difficulty level.
+         * @param {string} params.lang - The language ('es' or 'en').
+         * @returns {string} A formatted prompt string for the AI.
+         */
+        const promptByDifficulty = ({ subtopic, variation, difficulty, lang }) => {
+            const commonRules = `
+                **ROLE:** Meticulous physics examiner.
+                **TOPIC:** "${subtopic}" (${variation}).
+                **LANGUAGE:** ${lang === 'es' ? 'Spanish' : 'English'}.
+                **RULES:**
+                1.  **JSON ONLY:** Output MUST be a single, valid JSON object: {question: string, options: string[4..6], correctAnswerIndex: 0, solution: string[], metadata: { difficulty: string, numericAnswer?: number, numericTolerance?: number, unit?: string }}.
+                2.  **LATEX:** ALL mathematical notation (symbols, numbers with units, formulas) MUST be inside '$...$' delimiters.
+                3.  **CORRECT FIRST:** options[0] MUST be the correct answer. The other 3-5 options must be plausible, distinct distractors.
+                4.  **UNITS:** If the answer is numeric, all options must contain consistent, correct units (e.g., "$\\text{m/s}^2$").
+            `;
+
+            const difficultyRules = {
+                'Fundamental': "**DIFFICULTY RULE:** 'Fundamental'. The problem must be a direct, single-step application of one core formula. The solution must not chain multiple steps or use calculus.",
+                'Intermedio': "**DIFFICULTY RULE:** 'Intermedio'. The problem must require at least two distinct calculation steps or the combination of two formulas. The solution must not use calculus.",
+                'Intermediate': "**DIFFICULTY RULE:** 'Intermediate'. The problem must require at least two distinct calculation steps or the combination of two formulas. The solution must not use calculus.",
+                'Avanzado': "**DIFFICULTY RULE:** 'Avanzado'. The problem must involve multi-step reasoning or be symbolic. Options can be algebraic expressions. The solution must not use calculus.",
+                'Advanced': "**DIFFICULTY RULE:** 'Advanced'. The problem must involve multi-step reasoning or be symbolic. Options can be algebraic expressions. The solution must not use calculus.",
+                'Estilo Examen (AP)': "**DIFFICULTY RULE:** 'Estilo Examen (AP)'. The problem must have a main scenario, and the solution must be broken into parts (a), (b), (c). It should mix calculations with conceptual justifications. No calculus.",
+                'Exam Style (AP)': "**DIFFICULTY RULE:** 'Exam Style (AP)'. The problem must have a main scenario, and the solution must be broken into parts (a), (b), (c). It should mix calculations with conceptual justifications. No calculus.",
+                'Basado en Cálculo': "**DIFFICULTY RULE:** 'Basado en Cálculo'. The problem and its solution MUST explicitly require differential or integral calculus (e.g., using '\\int', '\\frac{d}{dt}', or 'd/dt').",
+                'Calculus-Based': "**DIFFICULTY RULE:** 'Calculus-Based'. The problem and its solution MUST explicitly require differential or integral calculus (e.g., using '\\int', '\\frac{d}{dt}', or 'd/dt')."
+            };
+            
+            // Default to Fundamental if difficulty doesn't match
+            const specificRule = difficultyRules[difficulty] || difficultyRules['Fundamental'];
+
+            return `${commonRules}\n${specificRule}`;
+        };
+
+        // --- Client-Side Validation Utilities ---
+        const hasLatex = (s) => typeof s === 'string' && /\$.+?\$/.test(s);
+        const latexEverywhere = (p) => p && hasLatex(p.question) && p.options?.every(hasLatex) && p.solution?.every(hasLatex);
+        const unitsOk = (p) => {
+            if (!p?.metadata?.unit) return true; // No unit specified, so it's ok.
+            const unit = p.metadata.unit;
+            return p.options?.every(opt => typeof opt === 'string' && opt.includes(unit));
+        };
+        const extractCorrectNumber = (p) => {
+            if (!p?.options?.[p.correctAnswerIndex]) return NaN;
+            const match = p.options[p.correctAnswerIndex].match(/-?\d+(\.\d+)?(e-?\d+)?/);
+            return match ? parseFloat(match[0]) : NaN;
+        };
+        const verifyNumeric = (p) => {
+            if (p?.metadata?.numericAnswer == null) return true; // Not a numeric problem to verify.
+            const expected = p.metadata.numericAnswer;
+            const tolerance = p.metadata.numericTolerance || 0.01; // 1% relative tolerance
+            const actual = extractCorrectNumber(p);
+            if (isNaN(actual)) return false;
+            return Math.abs(expected - actual) <= Math.abs(expected * tolerance);
+        };
+        const difficultyHeuristicOk = (p, difficulty) => {
+            if (!p?.solution || !p.question) return false;
+            switch (difficulty) {
+                case 'Fundamental': return p.solution.length <= 5;
+                case 'Intermedio':
+                case 'Intermediate': return p.solution.length >= 2;
+                case 'Basado en Cálculo':
+                case 'Calculus-Based': return p.solution.join(' ').includes('\\int') || p.solution.join(' ').includes('\\frac{d') || p.solution.join(' ').includes('d/dt');
+                case 'Análisis Conceptual':
+                case 'Conceptual Analysis': return !/\d/.test(p.question); // Conceptual questions shouldn't have numbers.
+                default: return true; // No specific heuristic for other types.
+            }
+        };
+        const passesFastGuards = (p, difficulty) => {
+            if (!p) return false;
+            const checks = [
+                latexEverywhere(p),
+                unitsOk(p),
+                verifyNumeric(p),
+                difficultyHeuristicOk(p, difficulty)
+            ];
+            const failedChecks = checks.map((res, i) => res ? null : i).filter(i => i !== null);
+            if (failedChecks.length > 0) {
+                console.warn("Problem failed validation guards:", { problem: p, failedChecks });
+                return false;
+            }
+            return true;
+        };
+        const withTimeout = (promise, ms) => {
+            return new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error('Promise timed out')), ms);
+                promise
+                    .then(value => { clearTimeout(timer); resolve(value); })
+                    .catch(reason => { clearTimeout(timer); reject(reason); });
+            });
+        };
+
 
         // --- Internationalization (i18n) ---
         // Context for providing and consuming language data throughout the app
@@ -650,7 +750,7 @@
                 'Time Constant': ['Meaning of the RC time constant'],
                 'Magnetic Force on Charges': ['Analysis of the Lorentz force'],
                 'Magnetic Force on Currents': ['Force on a conductor in a B field'],
-                'Magnetic Field of Conductors': ['Application of Ampere\'s Law (conceptual)'],
+                'Magnetic Field of Conductores': ['Application of Ampere\'s Law (conceptual)'],
                 'Magnetic Field of a Loop': ['Analysis of the field at the center of a loop'],
                 'Magnetic Field of a Solenoid': ['Analysis of the field in an ideal solenoid'],
                 "Faraday's Law": ['Analysis of induced EMF'],
@@ -678,109 +778,6 @@
         const difficultyLevels = {
             es: ['Análisis Conceptual', 'Fundamental', 'Intermedio', 'Avanzado', 'Estilo Examen (AP)', 'Basado en Cálculo'],
             en: ['Conceptual Analysis', 'Fundamental', 'Intermediate', 'Advanced', 'Exam Style (AP)', 'Calculus-Based']
-        };
-
-        // --- NEW PROMPT ARCHITECTURE ---
-        // This new architecture uses specialized prompts for each difficulty level.
-
-        const getBasePrompt = (variation, lang) => `
-**ROLE:** You are a meticulous physics examiner. Your primary goal is **ACCURACY** and **CLARITY**. You will create a physics problem based on a strict internal thought process.
-
-**INTERNAL THOUGHT PROCESS (Mandatory):** Before generating the JSON, you MUST follow these steps internally:
-1.  **Define Variables:** Choose realistic physical quantities for the problem.
-2.  **Write Formula:** Identify the core physics formula that connects these variables.
-3.  **Calculate Correct Answer:** Use the variables to calculate the correct answer. Ensure the result is a simple, clean number. **DOUBLE-CHECK YOUR MATH.**
-4.  **Formulate Problem:** Write a clear, concise problem statement using a real-world scenario that incorporates the variables you defined.
-5.  **Write Step-by-Step Solution:** Write a clear, logical, step-by-step solution that a student can easily follow. Each step must be a separate string in the "solution" array.
-6.  **Create Distractors:** Generate three plausible but incorrect answer options. They should be common mistakes (e.g., sign errors, unit conversion errors).
-7.  **Assemble JSON:** Build the final JSON object.
-
-**CRITICAL INSTRUCTIONS FOR OUTPUT:**
-* **ACCURACY FIRST:** All physics and calculations MUST be 100% correct.
-* **PROBLEM STRUCTURE VARIETY:** Your most important task is to vary the structure of the problem. Do not just change the objects; change WHAT is being asked and HOW. For example, for the concept of **${variation}**:
-    * One time, provide force and time, and ask for the change in velocity.
-    * Another time, provide mass and change in velocity, and ask for the average force.
-    * Another time, ask for a conceptual comparison between two different scenarios.
-* **SCENARIO VARIETY:** Use a clear, real-world scenario. **DO NOT USE drones, cars, or gymnasts.** Use diverse contexts like sports (a soccer ball being kicked), technology (a smartphone falling), or nature (a raindrop falling).
-* **LANGUAGE:** The entire output must be in ${lang === 'es' ? 'Spanish' : 'English'}.
-* **VISUAL RESTRICTION:** DO NOT generate problems that refer to graphs, diagrams, or figures. The problem must be 100% text-based.
-
-**JSON FORMATTING RULES (ZERO TOLERANCE):**
-1.  **Strict JSON:** The output MUST be a valid JSON object and nothing else.
-2.  **LaTeX:** ALL mathematical notation (numbers, variables, units) in the question, options, and solution MUST be inside dollar sign delimiters (\`$...\$\`).
-3.  **Correct Answer First:** The correct answer MUST be the first element in the 'options' array, and 'correctAnswerIndex' MUST be 0.
-4.  **Units:** All numerical options MUST include their units within the LaTeX delimiters (e.g., "$12.5 \\text{ Ns}$").
-`;
-
-        const getConceptualPrompt = (variation, lang) => getBasePrompt(variation, lang) + `
-**DIFFICULTY-SPECIFIC INSTRUCTION:**
-* **Focus:** This is an 'Análisis Conceptual' problem. It MUST be qualitative and require **ZERO calculations**.
-* **Task:** The question should test the student's understanding of the physical concepts, principles, or the relationships between variables. Ask "why," "how," or "what happens if." The options should be descriptive statements, not numbers.
-`;
-
-        const getFundamentalPrompt = (variation, lang) => getBasePrompt(variation, lang) + `
-**DIFFICULTY-SPECIFIC INSTRUCTION:**
-* **Focus:** This is a 'Fundamental' problem. It MUST be a direct, single-step application of a core formula.
-* **Task:** Provide all necessary values directly in the problem statement. The student should only need to identify the correct formula, substitute the values, and calculate the result. The solution should clearly show this single step.
-* **Math Method:** The solution MUST be purely algebraic.
-`;
-
-        const getIntermediatePrompt = (variation, lang) => getBasePrompt(variation, lang) + `
-**DIFFICULTY-SPECIFIC INSTRUCTION:**
-* **Focus:** This is an 'Intermedio' problem. It MUST require at least two distinct steps or the combination of two concepts/formulas.
-* **Task:** For example, the student might need to first calculate an intermediate value (like acceleration) and then use it in a second formula to find the final answer (like force). The solution must clearly outline these two steps.
-* **Math Method:** The solution MUST be purely algebraic.
-`;
-
-        const getAdvancedPrompt = (variation, lang) => getBasePrompt(variation, lang) + `
-**DIFFICULTY-SPECIFIC INSTRUCTION:**
-* **Focus:** This is an 'Avanzado' problem. It MUST involve multi-step reasoning and a more complex scenario.
-* **Task:** Do one of the following:
-    1.  **Symbolic Problem:** Present the problem with variables instead of numbers, and the answer choices should be algebraic expressions.
-    2.  **Multi-step Logic:** Create a problem where the student must analyze the situation carefully, possibly breaking it into multiple parts (e.g., motion up, then motion down) or applying a principle in a non-obvious way.
-* **Math Method:** The solution MUST be purely algebraic.
-`;
-
-        const getExamStylePrompt = (variation, lang) => getBasePrompt(variation, lang) + `
-**DIFFICULTY-SPECIFIC INSTRUCTION:**
-* **Focus:** This is an 'Estilo Examen (AP)' problem. It MUST be structured into multiple parts (e.g., a, b, c).
-* **Task:** The problem should start with a scenario, and then ask a series of related questions. These parts should build on each other. Include a mix of calculation and conceptual justification. For instance, part (a) could be a calculation, and part (b) could ask the student to explain *why* the value would increase if a certain parameter were changed.
-* **Math Method:** The solution MUST be purely algebraic.
-`;
-
-        const getCalculusBasedPrompt = (variation, lang) => getBasePrompt(variation, lang) + `
-**DIFFICULTY-SPECIFIC INSTRUCTION:**
-* **Focus:** This is a 'Basado en Cálculo' problem. It is NON-NEGOTIABLE that the solution requires calculus.
-* **Task:** The problem must provide a quantity as a function of another (e.g., velocity as a function of time, $v(t) = 3t^2 + 2t$). The question must require the student to find a derivative (e.g., find acceleration at $t=2s$) or an integral (e.g., find the displacement from $t=0s$ to $t=4s$).
-* **Math Method:** The solution MUST use differential or integral calculus.
-`;
-
-        // Main dispatcher function for prompts
-        const getProblemIntelligentPrompt = (subtopic, variation, difficulty, lang) => {
-            const difficultyKey = difficulty.replace(/\s+/g, ''); // Remove spaces for matching
-            
-            switch (difficultyKey) {
-                case 'AnálisisConceptual':
-                case 'ConceptualAnalysis':
-                    return getConceptualPrompt(variation, lang);
-                case 'Fundamental':
-                    return getFundamentalPrompt(variation, lang);
-                case 'Intermedio':
-                case 'Intermediate':
-                    return getIntermediatePrompt(variation, lang);
-                case 'Avanzado':
-                case 'Advanced':
-                    return getAdvancedPrompt(variation, lang);
-                case 'EstiloExamen(AP)':
-                case 'ExamStyle(AP)':
-                    return getExamStylePrompt(variation, lang);
-                case 'BasadoenCálculo':
-                case 'Calculus-Based':
-                    return getCalculusBasedPrompt(variation, lang);
-                default:
-                    // Fallback to a generic prompt if difficulty doesn't match
-                    return getFundamentalPrompt(variation, lang);
-            }
         };
 
         // --- UI Components ---
@@ -817,7 +814,7 @@
             }, [isDarkMode]);
             return (
                 <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-xl transition-colors" aria-label={isDarkMode ? "Activar modo claro" : "Activar modo oscuro"}>
-                    {isDarkMode ? '☀️' : '🌙'}
+                    {isDarkMode ? '☀️' : '?'}
                 </button>
             );
         };
@@ -1268,28 +1265,67 @@
                 const [error, setError] = useState('');
                 const [selectedOption, setSelectedOption] = useState(null);
                 const [feedback, setFeedback] = useState(null);
+                const { lang, t } = useLanguage();
 
-                // API call to generate a problem based on the prompt
                 const generateProblemAPI = useCallback(async () => {
-                    const prompt = getProblemIntelligentPrompt(subtopic, variation, difficulty, lang);
+                    const prompt = promptByDifficulty({ subtopic, variation, difficulty, lang });
                     const problemSchema = {
                         type: "OBJECT",
                         properties: {
                             question: { type: "STRING" },
                             options: { type: "ARRAY", items: { type: "STRING" } },
-                            correctAnswerIndex: { type: "INTEGER" },
-                            solution: { type: "ARRAY", items: { type: "STRING" } }
+                            correctAnswerIndex: { type: "INTEGER", enum: [0] },
+                            solution: { type: "ARRAY", items: { type: "STRING" } },
+                            metadata: {
+                                type: "OBJECT",
+                                properties: {
+                                    difficulty: { type: "STRING" },
+                                    numericAnswer: { type: "NUMBER" },
+                                    numericTolerance: { type: "NUMBER" },
+                                    unit: { type: "STRING" }
+                                }
+                            }
                         },
-                        required: ["question", "options", "correctAnswerIndex", "solution"]
+                        required: ["question", "options", "correctAnswerIndex", "solution", "metadata"]
                     };
-                    
-                    const data = await callBackend({
-                        prompt,
-                        responseSchema: problemSchema,
-                        temperature: 0.5, 
-                        model: 'gemini-2.0-pro' 
-                    });
-                    return data;
+
+                    const callAndValidate = async (config) => {
+                        const problemCandidate = await callBackend({
+                            prompt,
+                            responseSchema: problemSchema,
+                            model: 'gemini-2.0-pro',
+                            ...config
+                        });
+                        if (passesFastGuards(problemCandidate, difficulty)) {
+                            return problemCandidate;
+                        }
+                        throw new Error(`Generated problem failed validation. Config: ${JSON.stringify(config)}`);
+                    };
+
+                    const promise1 = withTimeout(callAndValidate({ temperature: 0.7, top_p: 0.9 }), 3500);
+                    const promise2 = withTimeout(callAndValidate({ temperature: 0.9, top_p: 0.95 }), 3500);
+
+                    try {
+                        const winner = await Promise.any([promise1, promise2]);
+                        
+                        // Post-process the winning candidate
+                        const options = [...winner.options];
+                        const correct = options[0]; // Correct answer is guaranteed to be at index 0 by the prompt
+
+                        // Fisher-Yates shuffle algorithm
+                        for (let i = options.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [options[i], options[j]] = [options[j], options[i]];
+                        }
+                        
+                        const newCorrectIndex = options.indexOf(correct);
+
+                        return { ...winner, options, correctAnswerIndex: newCorrectIndex };
+
+                    } catch (aggregateError) {
+                        console.error("All parallel generation attempts failed:", aggregateError.errors);
+                        throw new Error("Failed to generate a valid problem from all sources.");
+                    }
                 }, [subtopic, variation, difficulty, lang]);
 
                 const loadProblem = useCallback(async () => {
@@ -1301,20 +1337,9 @@
                     
                     try {
                         const problemFromApi = await generateProblemAPI();
-                        if (!problemFromApi) return;
-                        
-                        // Shuffle options to prevent the correct answer always being first
-                        const options = [...problemFromApi.options];
-                        const correctAnswer = options[0]; 
-                        for (let i = options.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [options[i], options[j]] = [options[j], options[i]];
-                        }
-                        const newCorrectIndex = options.indexOf(correctAnswer);
-                        
-                        setProblem({ ...problemFromApi, options: options, correctAnswerIndex: newCorrectIndex });
+                        setProblem(problemFromApi);
                     } catch (e) {
-                        setError("Ocurrió un error al generar el problema. Por favor, inténtalo de nuevo.");
+                        setError("Ocurrió un error al generar un problema válido. Por favor, inténtalo de nuevo.");
                     } finally {
                         setIsLoading(false);
                     }
@@ -1563,7 +1588,7 @@
                             <p>This application uses Google's Gemini API to generate study guides, problemas, and solutions. Like any artificial intelligence tool, the generated information may contain inaccuracies, errors, or may not be complete. Users are responsible for verifying and validating the information obtained through the application with reliable academic sources.</p>
                             <h3>4. User Responsibility</h3>
                             <p>You are responsible for your own learning. PhysicLabAI is a supplement to, not a substitute for, formal instruction, textbooks, and the guidance of a qualified teacher. We do not guarantee the accuracy or reliability of the AI-generated content.</p>
-                            <h3>5. Intellectual Property</h3>
+                            <h3>5. Propiedad Intelectual</h3>
                             <p>The structure, design, and interface of the application are the property of its creators. The generated content is a product of the Gemini API and is subject to its policies.</p>
                             </div>
                     ),
