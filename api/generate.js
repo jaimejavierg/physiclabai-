@@ -1,5 +1,7 @@
 export default async function handler(req, res) {
-  // --- CORS ---
+  // ───────────────────────────
+  // CORS
+  // ───────────────────────────
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -9,13 +11,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1️⃣ Verificar API KEY
+    // ───────────────────────────
+    // API KEY
+    // ───────────────────────────
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ ok: false, error: 'No API Key' });
     }
 
-    // 2️⃣ Leer body (Vercel a veces lo manda como string)
+    // ───────────────────────────
+    // BODY (Vercel-safe)
+    // ───────────────────────────
     const body =
       typeof req.body === 'string'
         ? JSON.parse(req.body)
@@ -23,7 +29,6 @@ export default async function handler(req, res) {
 
     const {
       prompt,
-      model,
       temperature,
       top_p,
       responseSchema
@@ -33,10 +38,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: 'No prompt' });
     }
 
-    // 3️⃣ MODELO CORRECTO (NO gemini-pro)
-    const chosenModel = model || 'gemini-2.0-flash';
+    // ───────────────────────────
+    // MODELO FIJO Y VÁLIDO
+    // ───────────────────────────
+    const model = 'gemini-2.0-flash';
 
-    // 4️⃣ Payload base
+    // ───────────────────────────
+    // PAYLOAD
+    // ───────────────────────────
     const payload = {
       contents: [
         {
@@ -50,14 +59,17 @@ export default async function handler(req, res) {
       }
     };
 
-    // 5️⃣ Si el frontend pide JSON (problemas / guías)
+    // JSON MODE solo cuando se pide schema
     if (responseSchema) {
       payload.generationConfig.responseMimeType = 'application/json';
       payload.generationConfig.responseSchema = responseSchema;
     }
 
-    // 6️⃣ Llamada a Gemini
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${apiKey}`;
+    // ───────────────────────────
+    // LLAMADA A GEMINI
+    // ───────────────────────────
+    const url =
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -69,7 +81,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const msg = data?.error?.message || response.statusText;
-      throw new Error(`Google Error (${chosenModel}): ${msg}`);
+      throw new Error(`Google Error (${model}): ${msg}`);
     }
 
     const text =
@@ -79,27 +91,34 @@ export default async function handler(req, res) {
       throw new Error('Respuesta vacía del modelo');
     }
 
-    // 7️⃣ Si NO hay schema → texto plano (Tutor IA)
+    // ───────────────────────────
+    // RESPUESTA
+    // ───────────────────────────
+
+    // Tutor IA → TEXTO
     if (!responseSchema) {
       return res.status(200).json({ ok: true, data: text });
     }
 
-    // 8️⃣ Si hay schema → intentamos parsear JSON
+    // Problemas / guías → JSON
     const cleaned = String(text)
       .replace(/```json/g, '')
       .replace(/```/g, '')
       .trim();
 
     try {
-      const parsed = JSON.parse(cleaned);
-      return res.status(200).json({ ok: true, data: parsed });
-    } catch (e) {
+      return res.status(200).json({
+        ok: true,
+        data: JSON.parse(cleaned)
+      });
+    } catch {
       return res.status(500).json({
         ok: false,
         error: 'Formato JSON inválido',
         raw: cleaned
       });
     }
+
   } catch (err) {
     return res.status(500).json({
       ok: false,
