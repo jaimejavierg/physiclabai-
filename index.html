@@ -268,8 +268,29 @@
         };
 
         // --- Client-Side Validation Utilities ---
-        const hasLatex = (s) => typeof s === 'string' && /\$.+?\$/.test(s);
-        const latexEverywhere = (p) => p && hasLatex(p.question) && p.options?.every(hasLatex) && p.solution?.every(hasLatex);
+        const hasLatex = (s) => {
+  if (typeof s !== 'string') return false;
+  return (
+    /\$.+?\$/.test(s) ||          // LaTeX con $
+    /\\(frac|times|cdot|sqrt|pi|sin|cos|tan|Delta)/.test(s) || // comandos comunes
+    /\d/.test(s)                  // al menos un número
+  );
+};
+        const latexEverywhere = (p) => {
+  if (!p) return false;
+
+  const questionOk = hasLatex(p.question || '');
+  const optionsOk =
+    Array.isArray(p.options) &&
+    p.options.length >= 4 &&
+    p.options.every(o => typeof o === 'string' && o.trim() !== '');
+
+  const solutionOk =
+    Array.isArray(p.solution) &&
+    p.solution.length >= 1;
+
+  return (questionOk || (p.options || []).some(hasLatex)) && optionsOk && solutionOk;
+};
         const unitsOk = (p) => {
             if (!p?.metadata?.unit) return true; // No unit specified, so it's ok.
             const unit = p.metadata.unit;
