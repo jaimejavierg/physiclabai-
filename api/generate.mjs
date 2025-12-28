@@ -1,95 +1,89 @@
-// api/generate.js — Versión 3.0 (Retry Agresivo)
+// api/generate.mjs - Versión 4.0 (Always Retry)
 export default async function handler(req, res) {
-  // Configuración de cabeceras CORS
+  // CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'Server Error: Missing GEMINI_API_KEY' });
+      return res.status(500).json({ error: 'Error: Falta GEMINI_API_KEY en Vercel' });
     }
 
     const { prompt, responseSchema, temperature = 0.3 } = req.body || {};
-    if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
+    if (!prompt) return res.status(400).json({ error: 'Falta el prompt' });
 
-    // Modelos a probar
-    const candidates = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-    
-    // --- FUNCIÓN HELPER PARA LLAMAR A GOOGLE ---
-    const callGoogle = async (model, useSchema) => {
-      const config = {
-        temperature,
-        responseMimeType: 'application/json',
+    // Usamos el 1.5 Flash primero porque es el más estable ahora mismo
+    const model = 'gemini-1.5-flash';
+
+    // Función auxiliar para conectar con Google
+    const callGemini = async (useSchema) => {
+      const config = { 
+        temperature, 
+        responseMimeType: 'application/json' 
       };
       
-      // Solo añadimos el esquema si useSchema es true Y existe un esquema
+      // Solo enviamos esquema si lo pedimos explícitamente
       if (useSchema && responseSchema) {
         config.responseSchema = responseSchema;
       }
 
-      const r = await fetch(
+      const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: config
-          }) 
+          })
         }
       );
 
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error?.message || r.statusText);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || response.statusText);
+      }
       return data;
     };
 
-    // --- BUCLE DE INTENTOS ---
-    let lastError = null;
+    try {
+      // INTENTO 1: Modo Perfecto (Con Esquema)
+      console.log('Intento 1: Con Esquema...');
+      const result = await callGemini(true);
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      return res.status(200).json({ ok: true, data: JSON.parse(text) });
 
-    for (const model of candidates) {
+    } catch (error1) {
+      console.warn('Falló Intento 1:', error1.message);
+
+      // INTENTO 2: Modo Todoterreno (Sin Esquema - Fallback)
+      // No preguntamos el error. Si falló el 1, ejecutamos el 2.
       try {
-        console.log(`Intentando ${model} con esquema...`);
-        const jsonResponse = await callGoogle(model, true); // Intento 1: Estricto
+        console.log('Intento 2: Sin Esquema (Fallback)...');
+        const result = await callGemini(false);
+        let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
         
-        const text = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return res.status(200).json({ ok: true, data: JSON.parse(text), model });
-
-      } catch (e) {
-        console.warn(`Fallo estricto ${model}: ${e.message}`);
-        
-        // --- CAMBIO CLAVE AQUÍ ---
-        // Ahora reintentamos SIEMPRE, sin importar qué error sea.
-        try {
-          console.log(`Activando PLAN B (sin esquema) para ${model}...`);
-          const looseResponse = await callGoogle(model, false); // Intento 2: Flexible (Sin Schema)
-          
-          let text = looseResponse.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-             // Limpiamos el texto por si trae ```json ... ```
-             text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-             return res.status(200).json({ ok: true, data: JSON.parse(text), model, method: 'fallback' });
-          }
-        } catch (e2) {
-          console.warn(`Fallo Plan B ${model}: ${e2.message}`);
-          lastError = e2.message;
+        // Limpieza de emergencia por si la IA devuelve Markdown
+        if (text) {
+          text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+          return res.status(200).json({ ok: true, data: JSON.parse(text) });
         }
+      } catch (error2) {
+        // Si fallan los dos, nos rendimos y mostramos el error real
+        console.error('Falló Intento 2:', error2.message);
+        return res.status(500).json({ 
+          error: 'No se pudo generar el contenido.', 
+          details: `Intento 1: ${error1.message} | Intento 2: ${error2.message}` 
+        });
       }
     }
 
-    // Si todo falla
-    return res.status(500).json({ error: 'Fallaron todos los intentos', detail: lastError });
-
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: 'Error crítico del servidor', details: e.message });
   }
 }
