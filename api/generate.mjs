@@ -1,92 +1,98 @@
-// api/generate.mjs
+// api/generate.mjs — Versión 10.0 (Cazador de Modelos)
 export default async function handler(req, res) {
-  // 1. Configuración de cabeceras CORS (Permite que tu HTML hable con este backend)
+  // 1. Configuración CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*'); // En producción, idealmente pon tu dominio aquí
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // Manejo de la solicitud "preflight" de CORS
   if (req.method === 'OPTIONS') return res.status(200).end();
-  
-  // Solo aceptamos peticiones POST
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  try {
-    // Verificamos que la llave exista en Vercel
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'Falta la API Key en las variables de entorno' });
-    }
-
-    // Extraemos los datos. Ignoramos el 'model' del frontend para forzar el uso del correcto aquí.
-    const { prompt, responseSchema, temperature = 0.3 } = req.body || {};
-    
-    if (!prompt) return res.status(400).json({ error: 'Falta el prompt' });
-
-    // --- CONFIGURACIÓN DE GEMINI ---
-    // Usamos 'v1beta' para tener acceso a funcionalidades avanzadas como responseSchema
-    const apiVersion = 'v1beta'; 
-    // Usamos 'gemini-1.5-flash' que es rápido, barato y soporta JSON nativo
-    const model = 'gemini-1.5-flash';
-
-    console.log(`Conectando a modelo: ${model} via ${apiVersion}...`);
-
-    // Construimos la petición para Google
-    const requestBody = {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: temperature,
-        // CRUCIAL: Esto fuerza a Gemini a responder SIEMPRE en JSON válido
-        responseMimeType: "application/json", 
-      }
-    };
-
-    // Si tu frontend envió una estructura (schema), se la pasamos a la IA
-    if (responseSchema) {
-      requestBody.generationConfig.responseSchema = responseSchema;
-    }
-
-    // Hacemos la llamada a la API de Google usando fetch (nativo en Node 18+)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Error devuelto por Google:", data);
-      throw new Error(data.error?.message || response.statusText);
-    }
-
-    // Extraemos el texto de la respuesta
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (text) {
-      // Como usamos responseMimeType, el texto YA es un JSON string. Lo parseamos.
-      try {
-        const parsed = JSON.parse(text);
-        return res.status(200).json({ ok: true, data: parsed, modelUsed: model });
-      } catch (jsonError) {
-        console.error("Error parseando JSON:", text);
-        // Intento de rescate si la IA falló en el formato
-        const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedRetry = JSON.parse(cleanedText);
-        return res.status(200).json({ ok: true, data: parsedRetry, modelUsed: model });
-      }
-    } else {
-      throw new Error('La IA respondió vacío.');
-    }
-
-  } catch (e) {
-    console.error("Server Error:", e);
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      detail: e.message 
-    });
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'Falta la API Key en Vercel' });
   }
+
+  const { prompt, responseSchema, temperature = 0.3 } = req.body || {};
+  if (!prompt) return res.status(400).json({ error: 'Falta el prompt' });
+
+  // --- LISTA DE MODELOS A PROBAR (EN ORDEN) ---
+  const modelsToTry = [
+    { id: 'gemini-1.5-flash', supportsJson: true },       // Opción A: El más rápido
+    { id: 'gemini-1.5-flash-latest', supportsJson: true }, // Opción B: Alias alternativo
+    { id: 'gemini-pro', supportsJson: false }             // Opción C: El clásico (Backup seguro)
+  ];
+
+  let lastError = null;
+
+  // --- BUCLE DE INTENTOS ---
+  for (const modelConfig of modelsToTry) {
+    const modelName = modelConfig.id;
+    console.log(`🔄 Intentando conectar con modelo: ${modelName}...`);
+
+    try {
+      // Configurar petición según capacidades del modelo
+      const requestBody = {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: temperature }
+      };
+
+      // Solo activamos JSON nativo para los modelos 1.5
+      if (modelConfig.supportsJson) {
+        requestBody.generationConfig.responseMimeType = "application/json";
+        if (responseSchema) {
+          requestBody.generationConfig.responseSchema = responseSchema;
+        }
+      }
+
+      // Llamada a Google
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        }
+      );
+
+      const data = await response.json();
+
+      // Si falla este modelo, lanzamos error para saltar al siguiente en el bucle
+      if (!response.ok) {
+        throw new Error(data.error?.message || response.statusText);
+      }
+
+      // ¡ÉXITO! Procesamos la respuesta
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!rawText) throw new Error('Respuesta vacía');
+
+      // Limpieza y Parseo
+      const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      try {
+        const parsedData = JSON.parse(cleanedText);
+        // Si llegamos aquí, funcionó. Retornamos y terminamos la función.
+        console.log(`✅ ÉXITO con modelo: ${modelName}`);
+        return res.status(200).json({ ok: true, data: parsedData, modelUsed: modelName });
+      } catch (e) {
+        // Si el JSON falla, no es culpa del modelo sino del formato, pero devolvemos error
+        // para que el usuario sepa que la IA respondió mal.
+        console.error(`⚠️ El modelo ${modelName} respondió, pero el JSON no era válido.`);
+        throw new Error('JSON inválido en la respuesta'); 
+      }
+
+    } catch (error) {
+      console.warn(`❌ Falló modelo ${modelName}: ${error.message}`);
+      lastError = error.message;
+      // El bucle continuará automáticamente con el siguiente modelo de la lista
+    }
+  }
+
+  // --- SI LLEGAMOS AQUÍ, TODOS FALLARON ---
+  return res.status(500).json({ 
+    error: 'No se pudo generar contenido con ningún modelo.', 
+    detail: `Último error: ${lastError}`,
+    tips: 'Verifica que la API "Generative Language API" esté habilitada en Google Cloud.'
+  });
 }
