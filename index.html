@@ -201,7 +201,7 @@
         });
         
         // --- Backend API helper function as requested ---
-        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.5-flash-preview-05-20', top_p = 0.95 }) {
+        async function callBackend({ prompt, responseSchema, temperature = 0.4, model = 'gemini-2.0-flash', top_p = 0.95 }) {
             const body = { prompt, responseSchema, temperature, model, top_p };
 
             try {
@@ -1057,7 +1057,7 @@
                         prompt,
                         responseSchema: guideSchema,
                         temperature: 0.30,
-                        model: 'gemini-2.5-flash-preview-05-20'
+                        model: 'gemini-2.0-flash'
                     });
                     setContent(data);
                 } catch (e) {
@@ -1156,7 +1156,7 @@
                     const text = await callBackend({
                         prompt,
                         temperature: 0.50,
-                        model: 'gemini-2.5-flash-preview-05-20'
+                        model: 'gemini-2.0-flash'
                     });
                     setChat(prev => [...prev, { role: 'ai', text }]);
                 } catch (e) {
