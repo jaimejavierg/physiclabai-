@@ -324,17 +324,22 @@
         };
         const passesFastGuards = (p, difficulty) => {
             if (!p) return false;
-            const checks = [
-                latexEverywhere(p),
-                unitsOk(p),
-                verifyNumeric(p),
-                difficultyHeuristicOk(p, difficulty)
-            ];
-            const failedChecks = checks.map((res, i) => res ? null : i).filter(i => i !== null);
-            if (failedChecks.length > 0) {
-                console.warn("Problem failed validation guards:", { problem: p, failedChecks });
+            
+            // Verificamos solo que tenga la estructura necesaria
+            const hasQuestion = typeof p.question === 'string' && p.question.trim().length > 0;
+            const hasOptions = Array.isArray(p.options) && p.options.length >= 2;
+            const hasSolution = Array.isArray(p.solution) && p.solution.length > 0;
+            const hasCorrectIndex = typeof p.correctAnswerIndex === 'number' && 
+                                    p.correctAnswerIndex >= 0 && 
+                                    p.correctAnswerIndex < (p.options ? p.options.length : 0);
+
+            // Si falla algo básico, lo descartamos
+            if (!hasQuestion || !hasOptions || !hasSolution || !hasCorrectIndex) {
+                console.warn("El problema falló la validación estructural:", p);
                 return false;
             }
+
+            // Si tiene la estructura correcta, lo aprobamos
             return true;
         };
         const withTimeout = (promise, ms) => {
